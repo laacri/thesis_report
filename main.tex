@@ -6,6 +6,8 @@
 % lmodern, caption, graphicx, color, booktabs, amsmath, fancyhdr.
 % DO NOT include them again.
 
+% original editor style: textmate
+
 \usepackage[hidelinks]{hyperref}
 \usepackage{amssymb}
 \usepackage{comment}
@@ -62,6 +64,31 @@
 % research questions e contributi finali (sorta di anticipo delle conclusioni)
 % riassunto del lavoro svolto (abstract-style)
 
+State-of-the-art (SotA) computer vision (CV) models are characterized by a restricted understanding of the visual world based on their training data.
+
+State-of-the-art computer vision systems are
+trained to predict a fixed set of predetermined
+object categories
+
+These models can perform very well on specific tasks and datasets, but they do not generalize well. They cannot handle new classes or images beyond the domain they have been trained with.
+
+a problem for building niche image classification use-cases, such as defect detection in agriculture, glacier and water levels monitoring, etc
+
+ It can be extraordinarily hard to gather labeled datasets that are large enough to fine-tune CV models with traditional methods for those specialized use cases. (datasets problem)
+
+In traditional CV algorithms, all that matters is the binary yes/no as to whether an image aligns with a class. A pre trained model can be trained to work even with a 1000 classes, but it will always be bound by them, and if a new class appears, it needs retraining. The real world is much more complex, and we would like to have a model that has a good general understanding of ALL the elements that could be in an image, without necessarily knowing in advance
+
+Retraining classification models is always an option, but training requires significant time and capital investment for gathering a classification dataset and the act of model training itself.
+
+CLIP has proved itself as an incredibly flexible classification model that often requires zero retraining. In this work, we will exploit the potential of zero-shot image classification using CLIP on satellite images.
+
+CLIP is more than a computer vision model: as a multimodal model, it understands different domains of information and has a simply amazing zero-shot ability. However, the remote sensing domain is a difficult one for CLIP to perform well. So, we thought of a solution that aims at maximizing CLIP's performance in this difficult domain while exploiting the additional information of non-RGB spectral bands but also not going for the straightforward (and demanding) road of re-training or finetuning the whole model - maximize performance while minimizing the "effort", and come up with a lightweight and fast solution
+
+Worth noting that CLIP alone didn't achieve SOTA performance on any particular dataset of benchmark
+
++ research question
+
+
 
 \chapter{Related Works} % --------------------------------------
 \section{CLIP in Remote Sensing}
@@ -82,8 +109,11 @@ Mention all the clip models finetuned on Remote sensing images introduced so far
 
 [List and describe a bit the techniques adopted in the previously discussed papers and approaches, also have a look at the ones present in the paper by that swiss guy who recently graduated with a thesis carried out in the IBM team!!]
 
+Look at the corresponding chapter in the Pi School report
+
 
 \chapter{Vision Language Models}  % ---------------------------
+
 Vision Language Models explained on HF: https://huggingface.co/blog/vlms
 
 %\section{Residual Networks backbone (ResNet)}
@@ -96,41 +126,44 @@ Vision Language Models explained on HF: https://huggingface.co/blog/vlms
 
 \chapter{The CLIP model} % ------------------------------------
 
+The OpenAI's \textbf{CLIP (Contrastive Language-Image Pre-Training)} model \cite{radford2021learning} was presented in 2021 and represents a significant leap in Vision-Language modeling, designed to learn a unified representation of images and texts. By jointly training on a diverse dataset of images and their corresponding textual descriptions, CLIP encodes both modalities into a shared embedding space, learning a joint representation that is ideal for many cross-modal tasks without requiring a specific fine-tuning: image classification, image-to-text or text-to-image retrieval, image segmentation, object detection and more.
 
-The OpenAI's CLIP (Contrastive Language-Image Pre-Training) model \cite{radford2021learning} represents a significant leap in Vision-Language modeling, designed to learn a unified representation of images and texts. By jointly training on a diverse dataset of images and their corresponding textual descriptions, CLIP encodes both modalities into a shared embedding space. This shared space allows CLIP to perform zero-shot classification, text-to-image retrieval, and other cross-modal tasks without requiring task-specific fine-tuning.
+The core principle behind CLIP is \emph{Contrastive Learning}, where the model is trained to maximize the similarity between matching image-text pairs and minimize the similarity between mismatched pairs. This approach enables the model to generalize to unseen data and tasks, making it highly versatile for real-world applications. Figure \ref{fig:clip} shows the overall structure of OpenAI's CLIP model: CLIP pre-trains a text encoder and an image encoder to align the similar input pairs leveraging a contrastive loss function. Once the inputs are in the shared embedding space, the dot product calculates the similarity between the embeddings.
 
-The core principle behind CLIP is \emph{contrastive learning}, where the model is trained to maximize the similarity between matching image-text pairs and minimize the similarity for mismatched pairs. This approach enables the model to generalize to unseen data and tasks, making it highly versatile for real-world applications. Figure \ref{fig:clip-architecture} shows the overall structure of OpenAI's CLIP model:
+Among the most notable benefits of CLIP:
 
+\begin{itemize}
+    \item It can deal with any piece of text from single words to full sentences, going beyond specific class labels. In fact, it can be prompted in natural language;
+    \item It has a strong understanding of general textual and visual concepts, thanks to the huge amount of data it was pre-trained on;
+    \item The text descriptors it was pre-trained on often describe various elements within an image, both in the foreground and in the background, enabling the model to recognize not only a picture's subject but also the context.
+\end{itemize}
+
+These are the primary factors that have led to CLIP's great success in Vision-Language modeling and its key role in many multimodal applications, including guide image generation processes in other models like the DALL-E family \cite{ramesh2022hierarchical} and Stable Diffusion \cite{rombach2022high}.
 
 
 \section{The CLIP architecture}
 
-%template to add images
+The CLIP model is characterized by a dual encoder architecture: two separate encoders handle the two modalities of an (image, text) input pair, with a Text Encoder handling the textual component and an Image Encoder handling the visual component.
+
 \begin{figure}[h]
     \centering
     \includegraphics[width=\textwidth]{img/CLIP-structure.png}
-    \caption{The CLIP model is composed by two encoders for the two different data sources, visual and textual, and employs a contrastive loss function to project the embedding of different modalities into a shared embedding space.}
+    \caption{The CLIP model is composed by two encoders for the two visual and textual data modalities, and employs a contrastive loss function to project the input embeddings into a shared embedding space \cite{radford2021learning}.}
     \label{fig:clip}
 \end{figure}
 
-\begin{figure}[h]
-    \centering
-    \includegraphics[width=\textwidth]{img/CLIP-zero-shot.png}
-    \caption{When using CLIP for zero-shot inference, a user can feed the model custom text and image inputs and obtain similarity scores that quantify how relevant each instance of one modality is to the other.}
-    \label{fig:clip-zs}
-\end{figure}
+For the \emph{Text Encoder}, the authors of CLIP adopted a Transformer model \cite{vaswani2017attention} with some minor architecture modifications described in \cite{radford2019language}. The base model, that corresponds to the one used for this thesis, accounts for a size of 63M parameters, 12 layers 512-wide and 8 attention heads. For reasons of computational efficiency, the maximum sequence length accepted is capped at 76 tokens.
+For the \emph{Image Encoder}, the authors of CLIP tried out two different architectures: the first is a modified version of ResNet-50 \cite{he2016deep}, inspired by the modifications done in \cite{he2019bag} and \cite{zhang2019making}, while the second is a slightly changed implementation of a Vision Transformer (ViT) \cite{dosovitskiy2020image}. The authors released checkpoints for several models belonging to both the ResNet and the ViT types. To decide which one to adopt, a careful review was conducted. In recent years, many literature works have shown  that ViTs achieve equal when not superior performance than ResNets in image classification tasks, at generally lower costs. This was demonstrated, among others, by \cite{tuli2021convolutional} who proved the superiority of ViT-B/32 versus ResNet-50 and also its higher consistency with human mistakes; by \cite{dosovitskiy2020image}, who showed how applying the Transformer architecture directly to sequences of images patches could revolutionize the field of computer vision; further confirmation of higher performance on both simple and complex tasks comes from \cite{deininger2022comparative}, \cite{hutten2022vision}, \cite{liu2024multivariate}. Soon enough, the potential of ViTs in the Remote Sensing industry started to be recognized, as shown in \cite{wang2022hyperspectral}. For these reasons, last but not least keeping in mind the most common backbones whose results are already available in the relevant literature, the ViT-B/32 has been chosen as the go-to architecture for this project and all the reported results are based on it.  
+
+Both models are optimized during training to encode similar text and image pairs close together in a vector space shared by the two modalities, while also separating the dissimilar pairs. This means that CLIP isn't specifically trained for image classification. It was trained on a huge amount of data from the web, accounting for more than 400 million (image, text) examples; this approach was preferred to adopting an existing dataset mainly because none of them could adequately reflect the natural language variety publicly available on the internet. This dataset was constructed with the goal of covering the broadest possible set of visual concepts, whose corresponding text includes one of $500,000$ queries extracted from Wikipedia and based on word frequency. Then, they made sure there are at least $20,000$ pairs per query. The resulting dataset has a has a similar total word count as the WebText dataset used to train GPT-2. This dataset is known as \textbf{WebImageText (WIT)}.
+
+Understanding natural language makes the model very good across different tasks, and better than traditional CNN models for generalization, and also very good at working with nuanced descriptions with higher level of detail or abstraction. These reasons are what make CLIP's zero-shot performances outstanding and why it's a very interesting model to work with.
 
 
-\section{Contrastive Learning}
-\section{Zero-Shot capabilities}
 
-\section{CLIP-like models for Remote Sensing}
-
-\subsection{RemoteCLIP}
-
-\subsection{GeoRSCLIP}
-
-\subsection{SkyCLIP}
+Summary of our approach. While standard image models jointly train an image feature extractor and a linear classifier to predict
+some label, CLIP jointly trains an image encoder and a text encoder to predict the correct pairings of a batch of (image, text) training
+examples
 
 
 CLIP \cite{radford2021learning} \\
@@ -145,6 +178,56 @@ this form and we use variants of "a satellite photo
 of a {label}."
 
 
+
+
+\section{Contrastive Learning}
+
+[Add the loss function and explain a bit how that works]
+
+The Information Noise Contrastive Estimation (InfoNCE) loss function is a popular method for Self-Supervised Learning (SSL), and specifically Contrastive Learning (CL). In particular, CL aims at teaching the model to distinguish between similar \emph{(positive)} and dissimilar \emph{(negative)} input pairs. 
+
+
+First introduced by \cite{sohn2016improved} and mostly popularized by \cite{oord2018representation}, this objective function enables CLIP to align relevant text and image input pairs by maximizing cosine similarity between matched pairs and minimizing cosine similarity for mismatches.
+
+\section{Zero-Shot capabilities}
+
+In computer vision, zero-shot learning usually refers to the study of generalizing to unseen object categories in image classification, that occurs when training and test classes are disjoint \cite{lampert2009learning}. However, the concept was later extended to indicate the broader case in which entire datasets are unseen.
+
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=\textwidth]{img/CLIP-zero-shot.png}
+    \caption{When using CLIP for zero-shot inference, a user can feed the model custom text and image inputs and obtain similarity scores that quantify how relevant each instance of one modality is to the other.}
+    \label{fig:clip-zs}
+\end{figure}
+
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.7\textwidth]{img/CLIP_zero_shot.png}
+    \caption{}
+    \label{fig:clipzs}
+\end{figure}
+
+When the model is fed a new image-text pair, the two different modalities are processed by their corresponding encoder. Both encoders output a 512-dimensional vector.
+
+we match the accuracy of the original ResNet-50 on ImageNet zero-shot without needing to use any of the 1.28 million training examples it was trained on.
+
+The zero shot transfer capability of CLIP is what still today makes it an incredibly powerful and robust choice: so much so, that despite being an "old" model (released back in 2021), it's still widely adopted in both research and industry-level technology. 
+
+Zero-shot CLIP is competitive with a fully supervised baseline
+
+
+\section{CLIP-like models for Remote Sensing}
+
+\subsection{RemoteCLIP}
+
+\subsection{GeoRSCLIP}
+
+\subsection{SkyCLIP}
+
+
+
 \chapter{Datasets} % ------------------------------------------
 
 A note before proceeding: the following datasets have been adopted due to their nature of benchmark and their importance in the literature, but they are *not* proper image-text datasets (that would be the best option to work with CLIP). This limitation is partly reflected in the final results, but they don't invalidate this work's contribution 
@@ -152,6 +235,14 @@ A note before proceeding: the following datasets have been adopted due to their 
 \section{EuroSAT}
 
 EuroSAT \cite{helber2019eurosat} is possibly the most well known dataset in Earth Observation ground/benchmark/ studies, has been the beta-tester for all the experiments carried out in this project and the main evaluation reference to compare models performance, even if it's less diverse and comprehensive than GEO-Bench (not as complete as a benchmark) it's been around for more time and many more experiments have been carried out on it, so good for reference as well.
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.5\textwidth]{img/EuroSAT_paper.png}
+    \caption{Example of different patches extracted to identify different land use and land cover classes in the EuroSAT dataset.}
+    \label{fig:eurosatds}
+\end{figure}
+
 
 \begin{figure}[h]
     \centering
@@ -181,7 +272,40 @@ EuroSAT \cite{helber2019eurosat} is possibly the most well known dataset in Eart
 \end{table}
 
 
+\begin{table}[ht]
+\centering
+\scriptsize
+%\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{lccp{6cm}}  % last column for description
+\toprule
+\textbf{Band Name} & \textbf{Spatial} & \textbf{Central} & \textbf{Description} \\
+{} & \textbf{Resolution} & \textbf{Wavelength} & \\
+{} & \emph{m} & \emph{nm} & \\
+\midrule
+B01 - Aerosols  & 60 & 443  & Useful for atmospheric corrections and aerosol detection. \\
+B02 - Blue & 10 & 490  & Penetrates water; useful for bathymetry, atmospheric corrections, and distinguishing vegetation. \\
+B03 - Green & 10 & 560  & Sensitive to plant reflectance; useful for vegetation analysis and true color imagery. \\
+B04 - Red & 10 & 665  & Captures vegetation and urban features; key in NDVI computation. \\
+B05 - Red edge 1 & 20 & 705  & Useful for analyzing chlorophyll content and vegetation stress. \\
+B06 - Red edge 2 & 20 & 740  & Enhanced vegetation sensitivity; used in crop monitoring. \\
+B07 - Red edge 3 & 20 & 783  & Helps assess canopy structure and plant health. \\
+B08 - NIR & 10 & 842  & Strong vegetation reflectance; essential in NDVI and biomass analysis. \\
+B08A - Red edge 4 & 20 & 865  & Fills spectral gap between NIR and red edge; aids precision agriculture. \\
+B09 - Water vapor & 60 & 945  & Targets atmospheric water vapor content; useful in climate and humidity studies. \\
+B10 - Cirrus & 60 & 1375 & Detects high-altitude cirrus clouds; supports cloud masking. \\
+B11 - SWIR 1 & 20 & 1610 & Used for vegetation moisture, snow, and burn area mapping. \\
+B12 - SWIR 2 & 20 & 2190 & Helps in soil and mineral discrimination, snow and fire monitoring. \\
+\bottomrule
+\end{tabular}
+\vspace{0.3cm}
+\caption{Sentinel-2 MSI spectral bands with spatial resolution, central wavelength, and descriptive use cases.}
+\label{tab:sentinel2_bands}
+\end{table}
+
+
 \paragraph{Composition}
+
+
 
 \section{GEO-Bench}
 
@@ -307,14 +431,27 @@ Specify how this dataset was preprocessed and modified, highlight differences wr
 
 \section{Multi Spectral Embedders}
 
+(Explain the concept)
+
+
 \subsection{MSI-1 embedder}
+
+(add some pseudocode)
+
 \subsection{MSI-2 embedder}
 \subsection{MSI-T embedder}
 
 \section{MSI + CLIP Model Structure}
 
+(add a schematization of where the embedder is placed in the model)
+
 \paragraph{Base model}
+
+(how the model works for specific datasets, adapting to the number of available bands, training and testing for the specific case)
+
 \paragraph{Transfer Learning model}
+
+(how the embedder trained on a specific dataset (and how that dataset was chosen) 
 
 \chapter{Experimental setup} % --------------------------------
 
@@ -456,6 +593,13 @@ This project focuses on some ground benchmarking work in the scope of \emph{imag
 
 - Explain the idea behind the binary approach and the one behind the multi-prompt approach
 
+(from CLIP's original paper, valid not only for text prompts experiment but also baseline tests)
+
+Another issue we encountered is that it’s relatively rare in our pre-training dataset for the text paired with the image to be just a single word. Usually the text is a full sentence describing the image in some way. To help bridge this distribution gap, we found that using the prompt template “A photo of a {label}.” to be a good default that helps specify the text is about the content of the image. This often improves performance over the baseline of using only the label text.
+
+Finally, we found that on satellite image classification datasets it helped to specify that the images were of this form and we use variants of “a satellite photo of a {label}.”.
+
+
 \paragraph{m-brick-kiln}
 
 TODO: List the prompts and the corresponding mapping to positive/negative classes
@@ -531,34 +675,34 @@ Mention that to keep integrity and consistency with the dataset we adopt norm3 f
 \section{Finetuning results}
 
 
-\begin{comment}
-\begin{table}[ht]
+\paragraph{EuroSAT}
+
+
+\begin{table}[h]
 \centering
-\small
-\renewcommand{\arraystretch}{1.2} 
-    \begin{tabular}{ccccccc}
-    %\hline
+\footnotesize
+\renewcommand{\arraystretch}{1.2}
+    \begin{tabular}{ccc}
     \specialrule{.1em}{.2em}{.2em}
-    \textbf{Model} & \textbf{Method} & \textbf{m-brick-kiln} & \textbf{m-pv4ger} & \textbf{m-forestnet} & \textbf{m-eurosat} & \textbf{m-so2sat} \\
-    %\hline
+    \textbf{Model} & \textbf{Method} & \textbf{EuroSAT} \\
     \specialrule{.06em}{.2em}{.2em}
-    CLIP      & zero-shot & 70.27\% & 73.87\% & 7.65\% & 41.90\% & 16.63\% \\
-    | &  | & | & | & | &| & | \\
-    MSI1+CLIP & MSI1 training & 84.48\% & 87.18\% & \textbf{10.77\%} & 44.29\% & \textbf{18.96\%} \\
-    {} & $\pm\Delta$ & \textcolor{customgreen}{+14.21\%} & \textcolor{customgreen}{+13.31\%} & \textcolor{customgreen}{+3.12\%} & \textcolor{customgreen}{+2.39\%} & \textcolor{customgreen}{+2.33\%} \\
-    MSI2+CLIP & MSI2 training & \textbf{89.88\%} & \textbf{93.69\%} & 9.36\% & \textbf{66.79\%} & 18.35\% \\
-    {} & $\pm\Delta$ & \textcolor{customgreen}{+19.62\%} & \textcolor{customgreen}{+19.82\%} & \textcolor{customgreen}{+1.71\%} & \textcolor{customgreen}{+24.89\%} & \textcolor{customgreen}{+1.72\%} \\
-    %\hline
+    CLIP        & zero-shot & 38.76\% \\ 
+    | &  | & | \\
+    MSI1+CLIP & MSI1 training  & 37.29\% \\
+    {} & $\pm\Delta$ & \textcolor{red}{-1.47\%} \\
+    MSI2+CLIP & MSI2 training & \textbf{75.44\%} \\
+    {} & $\pm\Delta$ & \textcolor{customgreen}{+36.68\%} \\
     \specialrule{.1em}{.2em}{.2em}
     \end{tabular}
 \vspace{0.3cm}
-\caption{Comparison of models with respect to the original CLIP.}
-\label{tab:multimodal_models}
+\caption{\normalsize Comparison of accuracies obtained after training different embedders on the EuroSAT original dataset: the first embedder almost matches the zero shot performance, while the second nearly doubles it.}
+\label{tab:eurobaselines}
 \end{table}
-\end{comment}
 
 
-%UPDATED:
+
+\paragraph{GEO-Bench}
+
 
 \begin{table}[ht]
 \centering
@@ -570,25 +714,16 @@ Mention that to keep integrity and consistency with the dataset we adopt norm3 f
     \textbf{Model} & \textbf{Method} & \textbf{m-brick-kiln} & \textbf{m-pv4ger} & \textbf{m-forestnet} & \textbf{m-eurosat} & \textbf{m-so2sat} \\
     %\hline
     \specialrule{.06em}{.2em}{.2em}
-    CLIP      & zero-shot & 70.27\% & 73.87\% & 7.65\% & 41.90\% & 16.63\% \\
+    CLIP      & zero-shot & 70.27\% & 73.87\% & 7.65\% & 41.90\% & \underline{16.63\%} \\
     | &  | & | & | & | &| & | \\
-    MSI1+CLIP & MSI1 training & 86.38\% & 92.19\% & \textbf{10.67\%} & 44.40\% & 15.82\% \\
+    MSI1+CLIP & MSI1 training & \underline{86.38\%} & \underline{92.19\%} & \textbf{10.67\%} & 44.40\% & 15.82\% \\
     {} & $\pm\Delta$ & \textcolor{customgreen}{+16.11\%} & \textcolor{customgreen}{+18.32\%} & \textcolor{customgreen}{+3.02\%} & \textcolor{customgreen}{+2.50\%} & \textcolor{red}{-0.81\%} \\
-    MSI2+CLIP & MSI2 training & \textbf{90.19\%} & \textbf{92.89\%} & 9.86\% & \textbf{67.50\%} & 18.45\% \\
+    MSI2+CLIP & MSI2 training & \textbf{90.19\%} & \textbf{92.89\%} & \underline{9.86\%} & \textbf{67.50\%} & \textbf{18.45\%} \\
     {} & $\pm\Delta$ & \textcolor{customgreen}{+19.92\%} & \textcolor{customgreen}{+19.02} & \textcolor{customgreen}{+2.21\%} & \textcolor{customgreen}{+25.60\%} & \textcolor{customgreen}{+1.82\%} \\
-    %\specialrule{.06em}{.2em}{.2em}
-    %| &  | & | & | & | &| & | \\
-    %MSI-T-s & transfer learn & 56.35\% & 71.97\% & 8.76\% & 16.79\% & \textbf{20.08\%} \\
-    %{} & $\pm\Delta$ & \textcolor{red}{-13.92\%} & \textcolor{red}{-1.90\%} & \textcolor{customgreen}{+1.11\%} & \textcolor{red}{-25.11\%} & \textcolor{customgreen}{+3.45\%} \\
-    %MSI-T-E & transfer learn & 62.46\% & 53.25\% & 10.27\% & 46.79\% & 9.43\% \\
-    %{} & $\pm\Delta$ & \textcolor{red}{-7.81\%} & \textcolor{red}{-20.62\%} & \textcolor{customgreen}{+2.62\%} & \textcolor{customgreen}{+4.89\%} & \textcolor{red}{-7.20\%} \\
-     %MSI-T-E-4L & transfer learn & 69.36\% & 86.68\% & 11.48\% & 53.60\% &  5.88\% \\
-    %{} & $\pm\Delta$ &  &  & &  &  \\
-    %\hline
     \specialrule{.1em}{.2em}{.2em}
     \end{tabular}
 \vspace{0.3cm}
-\caption{\normalsize Comparison of models with respect to the original CLIP, after training of the embedders.}
+\caption{\normalsize Comparison of models with respect to the original CLIP, after training the embedders: the score in bold refers to the best model and the underlined one to the second best.}
 \label{tab:msimodels}
 \end{table}
 
@@ -606,21 +741,21 @@ Mention that to keep integrity and consistency with the dataset we adopt norm3 f
     \textbf{Model} & \textbf{Method} & \textbf{m-brick-kiln} & \textbf{m-pv4ger} & \textbf{m-forestnet} & \textbf{m-eurosat} & \textbf{m-so2sat} \\
     %\hline
     \specialrule{.06em}{.2em}{.2em}
-    CLIP      & zero-shot & \textbf{70.27\%} & 73.87\% & 7.65\% & 41.90\% & 16.63\% \\
+    CLIP      & zero-shot & \textbf{70.27\%} & \underline{73.87\%} & 7.65\% & 41.90\% & \underline{16.63\%} \\
     | &  | & | & | & | &| & | \\
     MSI-T-s & zero shot & 56.35\% & 71.97\% & 8.76\% & 16.79\% & \textbf{20.08\%} \\
     (m-so2sat train) & $\pm\Delta$ & \textcolor{red}{-13.92\%} & \textcolor{red}{-1.90\%} & \textcolor{customgreen}{+1.11\%} & \textcolor{red}{-25.11\%} & \textcolor{customgreen}{+3.45\%} \\
     %\specialrule{.01em}{.2em}{.2em}
-    MSI-T-E & zero shot & 62.46\% & 53.25\% & 10.27\% & 46.79\% & 9.43\% \\
+    MSI-T-E & zero shot & 62.46\% & 53.25\% & \underline{10.27\%} & \underline{46.79\%} & 9.43\% \\
     (EuroSAT train) & $\pm\Delta$ & \textcolor{red}{-7.81\%} & \textcolor{red}{-20.62\%} & \textcolor{customgreen}{+2.62\%} & \textcolor{customgreen}{+4.89\%} & \textcolor{red}{-7.20\%} \\
     %\specialrule{.01em}{.2em}{.2em}
-     MSI-T-E-4L & zero shot & 69.36\% & \textbf{86.68\%} & \textbf{11.48\%} & \textbf{53.60\%} &  5.88\% \\
+     MSI-T-E-4L & zero shot & \underline{69.36\%} & \textbf{86.68\%} & \textbf{11.48\%} & \textbf{53.60\%} &  5.88\% \\
     (EuroSAT train) & $\pm\Delta$ & \textcolor{red}{-0.91\%} & \textcolor{customgreen}{+12.81\%} & \textcolor{customgreen}{+3.83\%} & \textcolor{customgreen}{+11.70\%} & \textcolor{red}{-10.75\%} \\
     %\hline
     \specialrule{.1em}{.2em}{.2em}
     \end{tabular}
 \vspace{0.3cm}
-\caption{\normalsize Comparison of models with respect to the original CLIP.}
+\caption{\normalsize Comparison of models with respect to the original CLIP: the accuracy in bold refers to the best performing model, the underlined one to the second best.}
 \label{tab:msimodels}
 \end{table}
 
@@ -682,7 +817,7 @@ Mention that to keep integrity and consistency with the dataset we adopt norm3 f
 
 
 \chapter{Conclusions} % ---------------------------------------
-Conclusions on the work results, discussion of potential future directions (applying the MSI Embedder to a RS-specialized CLIP, trying different models, trying Open Vision)
+Conclusions on the work results, discussion of potential future directions (applying the MSI Embedder to a RS-specialized CLIP, trying different models)
 
 Future work directions: hyperparameter tuning, trying bigger embedders, multilabel classification model to be restructured according to what said in that paper (maybe trying something like that with GeoRSCLIP or so, ...
 
@@ -718,7 +853,7 @@ Also see last chapters of the Pi School report
     \bottomrule
     \end{tabular}
 \vspace{0.3cm}
-\caption{\normalsize Performance of models on the m-bigearthnet dataset across various evaluation metrics.}
+\caption{\normalsize Performance of models on the m-bigearthnet dataset across various evaluation metrics: the accuracy in bold refers to the best performing model, the underlined one to the second best.}
 \label{tab:mbigearthnetresults}
 \end{table}
 
