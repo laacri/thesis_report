@@ -1,4 +1,4 @@
-\documentclass[a4paper, oneside, english]{sapthesis} % or twoside
+\documentclass[a4paper, twoside, english]{sapthesis} % or oneside
 % add noexaminfo to the options to hide information about graduation seession
 
 % Sapthesis explicitely loads the packages:
@@ -69,12 +69,13 @@
 
 \frontmatter
 \maketitle
-\dedication{(add a dedication)}
+
+%\dedication{(add a dedication)}
 
 %\abstract{(add an abstract)}
 % Use the following environment instead
 \begin{abstract}
-    This thesis investigates the application and adaptation of CLIP-like Vision-Language Models (VLMs) for Remote Sensing (RS) classification tasks, with a focus on incorporating multispectral data. While CLIP is well known for its remarkable zero-shot capabilities on standard images, its use in RS has been limited by the domain gap and the RGB constraint of its pretrained image encoder. To address this, we propose a lightweight, modular embedder that projects multispectral satellite imagery onto a format compatible with CLIP’s image encoder. We evaluate this approach across seven datasets including EuroSAT and the GEO-Bench benchmark, spanning binary, multiclass, and multilabel classification tasks. Our findings show that, even without retraining CLIP or applying prompt tuning, the proposed MSI + CLIP models consistently improve upon zero-shot baselines in task-specific training scenarios. We also explore transfer learning across datasets, highlighting the limitations introduced by resolution gaps, spectral mismatches, and semantic differences. While our approach struggles with multilabel classification, we outline promising future directions based on recent advances in multimodal learning. Overall, this work offers a modular and efficient path toward enhancing CLIP for Earth Observation, demonstrating that multispectral integration can substantially boost model performance with minimal architectural overhead.
+    This thesis investigates the application and adaptation of CLIP-like Vision-Language Models (VLMs) for Remote Sensing (RS) classification tasks, with a focus on incorporating multispectral data. While CLIP is well known for its remarkable zero-shot capabilities on standard images, its use in RS has been limited by the domain gap and the RGB constraint of its pretrained image encoder. To address these limitations, we propose a lightweight, modular embedder that projects multispectral satellite imagery onto a format compatible with CLIP’s image encoder. We evaluate this approach across seven datasets, including EuroSAT and the GEO-Bench benchmark, spanning binary, multiclass, and multilabel classification tasks. Our findings show that, even without retraining CLIP or applying prompt tuning, the proposed MSI + CLIP models consistently improve upon zero-shot baselines in task-specific training scenarios. We also explore transfer learning across datasets, highlighting the limitations introduced by resolution gaps, spectral mismatches, and semantic differences. While our approach struggles with multilabel classification, we outline promising future directions based on recent advances in multimodal learning. Overall, this work offers a modular and efficient path toward enhancing CLIP for Earth Observation, demonstrating that multispectral integration can substantially boost model performance with minimal architectural overhead.
 \end{abstract}
 
 \tableofcontents
@@ -86,62 +87,63 @@
 % - the topic is machine learning (SSL specifically)
 % - clarify research questions and contributions, to take up again in the conclusion
 
-In broad terms, remote sensing is the process of acquiring information from a distance using appropriate satellite or aerial instrumentation. As a field of study, it has gained increasing attention over the past few years, demonstrating to play a fundamental role in agriculture, meteorology, environmental science, not to mention large-scale and impactful social challenges such as climate change, urbanization and disaster management. In contrast to conventional computer vision domains, remote sensing features a unique kind of data, inherently multimodal: in fact, satellite imagery is captured through different types sensors like optical (multispectral and hyperspectral), Lidar and SAR, which capture complex geophysical elements and are collected at high spatial and temporal resolutions. These images span different sets of multiple spectral bands and are highly rich in metadata related to georeferencing, topographic and geodetic measurements, which serve as the primary source of information for many and diverse types of analyses. Moreover, remote sensing increasingly faces the big data problem as terabytes of satellite images are captured every day and need to be organized and processed fast, in efficient and scalable ways. In this context, deep learning can make a massive contribution providing flexible and domain-adaptive models to tackle specialized tasks \cite{zhu2017deep}.
+In broad terms, remote sensing is the process of acquiring information from a distance using appropriate satellite or aerial instrumentation. As a field of study, it has gained increasing attention over the past few years, demonstrating to play a fundamental role in agriculture, meteorology and environmental science, not to mention large-scale and impactful social challenges such as climate change, urbanization and disaster management. In contrast to conventional computer vision domains, remote sensing features a unique kind of data, inherently multimodal. In fact, satellite imagery is captured through different types of sensors like optical (multispectral and hyperspectral) and radar (Lidar and SAR), which capture complex geophysical elements and are collected at high spatial and temporal resolutions. These images span different sets of multiple spectral bands and are highly rich in metadata related to georeferencing, topographic and geodetic measurements, which serve as the primary source of information for many and diverse types of analyses. Moreover, remote sensing increasingly faces the big data problem, as terabytes of satellite images are captured every day and need to be organized and processed fast, in efficient and scalable ways. In this context, deep learning can make a substantial contribution by providing flexible and domain-adaptive models to tackle specialized tasks \cite{zhu2017deep}. \\
 
-In recent times, the deep learning subfield of computer vision \cite{szeliski2022computer} has witnessed unprecedented advancements. The most famous and fundamental computer vision models are undoubtedly convolutional neural networks (CNNs) \cite{lecun1989backpropagation}, built in the context of supervised learning, which can be easily trained on vast labeled datasets and achieve state-of-the-art performance on a wide range of visual tasks from object detection \cite{viola2001rapid} to scene understanding \cite{oliva2001modeling} and semantic segmentation \cite{shotton2008semantic}. However, despite being highly effective for specific tasks, these models entail two major limitations: first, all supervised learning approaches require labeled datasets, and it can be surprisingly hard to assemble a comprehensive remote sensing dataset of good quality due to the remarkable need of human and computational effort to preprocess and carefully annotate satellite images, which is a highly costly and often impractical process; secondly, the performance of supervised models is tied to the nature and scope of their training data, i.e. they are typically trained to predict from a fixed set of categories and can't handle new classes or distributional shifts: every minor modification in the desired behaviour would imply modifying the training dataset, and this is unfeasible for the above reasons.
+In recent times, the field of computer vision \cite{szeliski2022computer} has witnessed unprecedented advancements. The most famous and fundamental computer vision models are undoubtedly convolutional neural networks (CNNs) \cite{lecun1989backpropagation}, built in the context of supervised learning, which can be easily trained on vast labeled datasets and currently hold state-of-the-art performance on a wide range of visual tasks from object detection \cite{viola2001rapid} to scene understanding \cite{oliva2001modeling} and semantic segmentation \cite{shotton2008semantic}. However, despite being highly effective for specific tasks, these models entail two major limitations: first, all supervised learning approaches require labeled datasets, and it can be surprisingly hard to assemble a comprehensive remote sensing dataset of good quality due to the remarkable need of human and computational effort to preprocess and carefully annotate satellite images, which is a highly costly and often impractical process; secondly, the performance of supervised models is tied to the nature and scope of their training data, i.e. they are typically trained to predict from a fixed set of categories and can't handle new classes or distributional shifts: every minor modification in the desired behaviour would imply modifying the training dataset, and this is unfeasible for the above reasons. \\
 
-In this context, the advent of Vision-Language Models (VLMs) has revolutionized computer vision \cite{marimo2025beyond} introducing powerful zero-shot generalization capabilities and great cross-modal performances. VLMs are powerful deep learning multimodal models that bridge the gap between text and visual data such as images or videos, allowing to address complex tasks such as image generation from text prompts or image captioning from visual inputs. To be able to fulfill these and other functions, VLMs typically include two essential components: a vision encoder and a language encoder. Then, different training strategies can be adopted to learn how to align information from the two different data modalities, some of the most popular being Contrastive Learning \cite{radford2021learning} \cite{chen2020simple} \cite{he2020momentum} \cite{jia2021scaling}, Masking \cite{singh2022flava}, Generative Model Pretraining \cite{ramesh2022hierarchical} \cite{rombach2022high} \cite{saharia2022photorealistic} \cite{alayrac2022flamingo}. In particular, this thesis work focuses on \emph{CLIP (Contrastive Language–Image Pretraining)} \cite{radford2021learning}, a self-supervised VLM introduced by OpenAI in 2021. CLIP and derived models differ from traditional CNN pipelines in belonging to the category of Self-Supervised Learning algotirhms, specifically Contrastive Learning, and in being multimodal models able to align visual and textual representations in a shared embedding space. Moreover, the original model exhibits stunning zero-shot abilities which are the reason why it is still one of the most widely used and appreciated models in cross-modal applications, despite some may consider it slightly "old" now (given the current rate of release of new machine learning models). While CLIP may not achieve top-tier accuracy on every benchmark when compared to task-specific models like CNNs, its generalization capabilities and support for natural language labels make it an unrivaled versatile tool for its versatility.
+In this context, the advent of Vision-Language Models (VLMs) has revolutionized computer vision \cite{marimo2025beyond}, introducing powerful zero-shot generalization capabilities and great cross-modal performances. VLMs are powerful deep learning multimodal models that bridge the gap between text and visual data such as images or videos, allowing to address complex tasks such as image generation from text prompts or image captioning from visual inputs. To fulfill these and other functions, VLMs typically include two essential components: a vision encoder and a language encoder. 
+Then, different training strategies can be adopted to learn how to align information from the two different data modalities, some of the most popular being Contrastive Learning \cite{radford2021learning} \cite{chen2020simple} \cite{he2020momentum} \cite{jia2021scaling}, Masking \cite{singh2022flava} and Generative Model Pretraining \cite{ramesh2022hierarchical} \cite{rombach2022high} \cite{saharia2022photorealistic} \cite{alayrac2022flamingo}. In particular, this thesis focuses on \emph{CLIP (Contrastive Language–Image Pretraining)} \cite{radford2021learning}, a self-supervised VLM introduced by OpenAI in 2021. CLIP and derived models differ from traditional CNN pipelines in belonging to the category of Self-Supervised Learning algorithms, specifically Contrastive Learning, and in being multimodal models able to align visual and textual representations in a shared embedding space. Moreover, the original model exhibits stunning zero-shot abilities, which are the reason why it is still one of the most widely used and appreciated models in cross-modal applications. While CLIP may not achieve top-tier accuracy on every benchmark when compared to task-specific models like CNNs, its generalization capabilities and support for natural language labels make it an unrivaled, versatile tool. \\
 
-This thesis explores the prospects of CLIP-like models in the remote sensing domain, where these properties are particularly valuable given the non-trivial nature of the data and the applications. The baseline performance of CLIP and its domain-specialized variants \cite{liu2024remoteclip} \cite{zhang2024rs5m} \cite{wang2024skyscript} is assessed on a suite of remote sensing benchmark datasets. Nevertheless, a fundamental challenge remains: CLIP and its derivatives are intrinsically limited to RGB imagery, while most satellite data contain a higher amount of information spanning across multiple bands of the electromagnetic spectrum (e.g., near-infrared, shortwave infrared). These additional bands can capture features invisible to the human eye that are essential for many remote sensing tasks, holding a great unexploited potential. However, it's not trivial to leverage this rich information within the CLIP framework as the model is neither designed nor trained to process multispectral (MSI) inputs. A straightforward solution would be to retrain a CLIP-like model entirely on multispectral data \cite{marimo2025beyond} or to fine-tuned it, but both these ideas come together with high costs of time and resources. Instead, this work proposes a comparatively lightweight and scalable solution to integrate multispectral information into CLIP-like models without the computational burden of retraining the entire architecture. Specifically, we introduce a modular MSI embedder that projects multispectral inputs into a 3-channel representation compatible with CLIP's original RGB-only image encoder. By training only this embedder while keeping the rest of CLIP frozen, we aim to enhance model performance with minimal computational effort, exploiting the full spectral data abundance of remote sensing images.
+This thesis explores the prospects of CLIP-like models in the remote sensing domain, where these properties are particularly valuable given the non-trivial nature of the data and its applications. The baseline performance of CLIP and its domain-specialized variants \cite{liu2024remoteclip} \cite{zhang2024rs5m} \cite{wang2024skyscript} is assessed on a suite of remote sensing benchmark datasets. Nevertheless, a fundamental challenge remains: CLIP and its derivatives are intrinsically limited to RGB imagery, while most satellite data contain a higher amount of information spanning across multiple bands of the electromagnetic spectrum (e.g., near-infrared, shortwave infrared). These additional bands can capture features invisible to the human eye that are essential for many remote sensing tasks, holding a great unexploited potential. However, it's not trivial to leverage this rich information within the CLIP framework as the model is neither designed nor trained to process multispectral (MSI) inputs. A straightforward solution would be to retrain a CLIP-like model entirely on multispectral data \cite{marimo2025beyond} or to fine-tune it, but both these ideas come with high costs of time and resources. Instead, this work proposes a comparatively lightweight and scalable solution to integrate multispectral information into CLIP-like models without the computational burden of retraining the entire architecture. Specifically, we introduce a modular MSI embedder that projects multispectral inputs into a 3-channel representation compatible with CLIP's original RGB-only image encoder. By training only this embedder while keeping the rest of CLIP frozen, we aim to enhance model performance with minimal computational effort, exploiting the full spectral data abundance of remote sensing images. \\
 
 The research questions at the core of this work are:
 
 \begin{enumerate}
     \item How well do existing CLIP-like models perform in zero-shot classification on standard RGB remote sensing datasets?
-    \item Is it possible to improve CLIP’s classification performance in remote sensing by integrating multispectral data through a lightweight embedder?
-    \item Can this approach generalize across datasets, i.e. lends itself to transfer learning scenarios?
+    \item Is it possible to improve CLIP's classification performance in remote sensing by integrating multispectral data through a lightweight embedder?
+    \item Can this approach generalize across datasets, i.e. lend itself to transfer learning scenarios?
 \end{enumerate}
 
-To answer such questions, a series of experiments was conducted along three main directions: benchmarking zero-shot performance of various CLIP-based models on RGB imagery, developing and evaluating two variants of the MSI embedder (namely MSI1 and MSI2), exploring different image normalization techniques and transfer learning setups to implement a model with good generalization capabilities. We found that integrating multispectral information via the proposed approach consistently matches or improves classification accuracy over RGB-only baselines after fine-tuning and also the transfer learning idea succeeded in certain configurations - highlighting the potential of this lightweight, plug-and-play strategy and paving the way for further enhancement of VLMs integrating MSI information in the remote sensing domain.
+To answer these questions, a series of experiments was conducted along three main directions: benchmarking zero-shot performance of various CLIP-based models on RGB imagery, developing and evaluating two variants of the MSI embedder (namely MSI1 and MSI2), exploring different image normalization techniques and transfer learning setups to implement a model with good generalization capabilities. We found that integrating multispectral information via the proposed approach consistently matches or improves classification accuracy over RGB-only baselines after fine-tuning and also the transfer learning idea succeeded in certain configurations, highlighting the potential of this lightweight, plug-and-play strategy and paving the way for further enhancement of VLMs integrating MSI information in the remote sensing domain.
 
 \chapter{Related Works} % --------------------------------------
 
-Vision-Language Models and specifically CLIP-style contrastive pretraining methods have started to gain popularity in the Earth Observation (EO) field only in the last couple of years: nevertheless, many great contributions have been made to this research area since then, leading to the release of increasingly curated datasets and models. Still, most of this work remained confined to standard RGB imagery, ignoring the informative content of additional spectral bands provided by the satellite sources. This approach leaves out a significant part of the data, that could be leveraged to improve performance. It's worth highlighting that visual tasks on satellite images are particularly challenging for Vision-Language Models, which are generally pretrained on normal images and achieve overall lower performances than specialized CNNs. In our opinion, there is much room for improvement for this category of models - and exploiting the full remote sensing information will be key.
+Vision-Language Models and specifically CLIP-style contrastive pretraining methods have started to gain popularity in the Earth Observation (EO) field only in the last couple of years; nevertheless, many great contributions have been made to this research area since then, leading to the release of increasingly curated datasets and models. Still, most of this work remained confined to standard RGB imagery, ignoring the informative content of additional spectral bands provided by the satellite sources. This approach leaves out a significant part of the data - that could be leveraged to improve performance. It's worth highlighting that visual tasks on satellite images are particularly challenging for Vision-Language Models, which are generally pretrained on normal images and achieve overall lower performances than specialized CNNs. In our opinion, there is much room for improvement for this category of models, and exploiting the full remote sensing information will be key.
 
 \section{Image-Text Datasets in Remote Sensing}
 
-A crucial issue lies in that EO data often lack suitable natural language captions or description and tend to include only categorical labels or metadata. While some approaches have been tried out to generate captions automatically, they mostly include annotations based on metadata and/or curated by humans, as is the case with the famous RSITMD \cite{yuan2022exploring}, RSICD \cite{lu2017exploring} and UCM \cite{yang2010bag}; being too limited in size to support training ($< 10,000$ samples), they are mainly used for evaluation purposes. Larger efforts feature BigEarthNet \cite{sumbul2019bigearthnet}, a broad archive first proposed in 2019 comprising approximately $590,000$ Sentinel‑2 patches with multi-label land-cover annotations covering 43 classes; this datasets was later extended to include Sentinel‑1 data in the BigEarthNet‑MM version from 2021 \cite{sumbul2021bignearthnetmm} for a total of $590,326$ patches, enabling multi-modal analysis across SAR and optical bands for the same geographic tiles; then, it was further refined into reBEN \cite{clasen2024reben} later this year, containing $549,488$ pairs of Sentinel-1 and Sentinel-2 high quality image patches of size 1200 m x 1200 m. Other prominent works include RSCLIP \cite{li2023rs} which introduced a pseudo-labeling technique to fine-tuned the CLIP model on RS images; the RS5M dataset \cite{zhang2024rs5m} which managed to reach a dimension of $5$ millions of image-text samples employing BLIP-2 \cite{li2023blip} to generate captions; the SkyScript dataset \cite{wang2024skyscript} leveraged geocoordinates to connect images to the rich semantics provided by OpenStreetMap, accounting for $2.6$ million image-text pairs covering 29K distinct conceptual tags; ChatEarthNet \cite{yuan2024chatearthnet} was the first dataset including diverse imagery and employing models of the ChatGPT family to generate image descriptions, for a total of $163488$ images captioned with ChatGPT-3.5 and $10000$ additional pairs captioned by ChatGPT-4V. Even so, all these approaches remain fundamentally RGB-only, missing out on the rich spectral information captured by multispectral or hyperspectral sensors. However, it is worth noticing that the value of MSI information is starting to gather more and more interest in recent times: the Major TOM (Terrestrial Observation Metaset) dataset \cite{francis2024major} was part of an initiative by ESA $\Phi$-lab to standardize and unify large-scale EO datasets based on a global 10km $\times$ 10km grid including millions of satellite image patches, divided in sets differentiated by sensor data spannig across both Sentinel-1 (radar) and Sentinel-2 (optical) for highly composite spectral images; finally, as of just a few months ago, TerraMesh \cite{blumenstiel2025terramesh} marked another significant leap forward introducing a massive globally distributed, multimodal dataset with over $9$ million co-registered samples, including optical, SAR and elevation data, NDVI indexes and land-cover maps - all preprocessed in an analysis and pretraining ready form.
+A crucial issue lies in that EO data often lack suitable natural language captions or descriptions and tend to include only categorical labels or metadata. While some approaches have been tried out to generate captions automatically, they mostly include annotations based on metadata and/or curated by humans, as is the case with the famous RSITMD \cite{yuan2022exploring}, RSICD \cite{lu2017exploring} and UCM \cite{yang2010bag}; being too limited in size to support training ($< 10,000$ samples), they are mainly used for evaluation purposes. Larger efforts feature BigEarthNet \cite{sumbul2019bigearthnet}, a broad archive first proposed in 2019 comprising approximately $590,000$ Sentinel‑2 patches with multi-label land-cover annotations covering 43 classes; this datasets was later extended to include Sentinel‑1 data in the BigEarthNet‑MM version from 2021 \cite{sumbul2021bigearthnet} for a total of $590,326$ patches, enabling multi-modal analysis across SAR and optical bands for the same geographic tiles; then, it was further refined into reBEN \cite{clasen2024reben} later this year, containing $549,488$ pairs of Sentinel-1 and Sentinel-2 high quality image patches of size 1200 m x 1200 m. Other prominent works include RSCLIP \cite{li2023rs} which introduced a pseudo-labeling technique to fine-tuned the CLIP model on RS images; the RS5M dataset \cite{zhang2024rs5m} which managed to reach a dimension of $5$ millions of image-text samples employing BLIP-2 \cite{li2023blip} to generate captions; the SkyScript dataset \cite{wang2024skyscript} leveraged geocoordinates to connect images to the rich semantics provided by OpenStreetMap, accounting for $2.6$ million image-text pairs covering 29K distinct conceptual tags; ChatEarthNet \cite{yuan2024chatearthnet} was the first dataset including diverse imagery and employing models of the ChatGPT family to generate image descriptions, for a total of $163488$ images captioned with ChatGPT-3.5 and $10000$ additional pairs captioned by ChatGPT-4V. Even so, all these approaches remain fundamentally RGB-only, missing out on the rich spectral information captured by multispectral or hyperspectral sensors. However, it is worth noticing that the value of MSI information is starting to gather more and more interest in recent times: the Major TOM (Terrestrial Observation Metaset) dataset \cite{francis2024major} was part of an initiative by ESA $\Phi$-lab to standardize and unify large-scale EO datasets based on a global 10km $\times$ 10km grid including millions of satellite image patches, divided in sets differentiated by sensor data spannig across both Sentinel-1 (radar) and Sentinel-2 (optical) for highly composite spectral images; finally, as of just a few months ago, TerraMesh \cite{blumenstiel2025terramesh} marked another significant leap forward introducing a massive globally distributed, multimodal dataset with over $9$ million co-registered samples, including optical, SAR and elevation data, NDVI indexes and land-cover maps - all preprocessed in an analysis and pretraining ready form.
 
 These datasets, although offering rich, multispectral grounding, are not accompanied by suitable text captions to leverage the full potential of VLMs relying on contrastive learning and the current CLIP-based landscape for remote sensing remains limited to RGB-only inputs.
 
 
 \section{RGB Approaches}
 
-To adapt CLIP to the earth observation domain without redesigning its core, several methods have fine-tuned CLIP backbones on remote sensing-specific datasets of RGB images captioned with various techniques, ranging from manually to semi-automatic and fully automatic annotation approaches. The most significant contributions include:
+To adapt CLIP to the earth observation domain without redesigning its core, several methods have fine-tuned CLIP backbones on remote sensing-specific datasets of RGB images captioned with various techniques, ranging from manual to semi-automatic and fully automatic annotation approaches. The most significant contributions include:
 
 \begin{itemize}
-    \item \textbf{RemoteCLIP} (2023) \cite{liu2024remoteclip}: the first large-scale application of CLIP to remote sensing, is a \emph{foundation model} which builds an image–caption corpus from bounding-box and segmentation annotations using Box‑to‑Caption and Mask‑to‑Box conversions, augmented with UAV imagery—12× larger than prior datasets. This enabled zero-shot classification, retrieval, k‑NN, few-shot tasks, and novel object counting, achieving up to $6.4\%$ improvement in accuracy and $\sim 9\%$ recall gains in retrieval;
+    \item \textbf{RemoteCLIP} (2023) \cite{liu2024remoteclip}: the first large-scale application of CLIP to remote sensing, is a \emph{foundation model} which builds an image–caption corpus from bounding-box and segmentation annotations using Box‑to‑Caption and Mask‑to‑Box conversions, augmented with UAV imagery and 12× larger than prior datasets. This enabled zero-shot classification, retrieval, k‑NN, few-shot tasks, and novel object counting, achieving up to $6.4\%$ improvement in accuracy and $\sim 9\%$ recall gains in retrieval;
     \item \textbf{SkyCLIP} (late 2023) \cite{wang2024skyscript}: fine-tuned on the SkyScript dataset and released at the publication of the paper as part of the experiments, it consistently outperformed RemoteCLIP in scene classification and fine-grained classification tasks;
-    \item \textbf{GeoRSCLIP} (early 2024) \cite{zhang2024rs5m}: pretrained on RS5M, it achieved state-of-the-art performances surpassing RemoteCLIP in all the relevant benchmarks providing robust downstream performance;
+    \item \textbf{GeoRSCLIP} (early 2024) \cite{zhang2024rs5m}: pretrained on RS5M, it achieved state-of-the-art performances, surpassing RemoteCLIP in all the relevant benchmarks and providing robust downstream performance;
     \item \textbf{RS-M-CLIP} (2024) \cite{silva2024multilingual}: a multilingual variant of CLIP trained on translated captions, achieving state‑of‑the‑art cross-modal multilingual retrieval and zero-shot classification performance. It supports nine other languages in addition to English (German, French, Spanish, Chinese, Portuguese, Italian, Russian, Korean, and Dutch);
-    \item \textbf{PIR-CLIP} (2024) \cite{pan2024pir}: this model enhanced retrieval via “prior instruction” learning, targeting improved text representation and semantic clarity. Again surpassed the state-of-the-art performance in cross-modal image-to-text and text-to-image retrieval tasks, improving on the precedent models as shown in Figure \ref{fig:pirclip};
+    \item \textbf{PIR-CLIP} (2024) \cite{pan2024pir}: this model enhanced retrieval via “prior instruction” learning, targeting improved text representation and semantic clarity. Again, surpassed the state-of-the-art performance in cross-modal image-to-text and text-to-image retrieval tasks, improving on the precedent models as shown in Figure \ref{fig:pirclip};
     \item \textbf{SEN-CLIP} (late 2024) \cite{jain2025senclip}: this model focused on Sentinel‑2 imagery and adopted specialized pooling strategies, obtaining $10\%+$ accuracy increases over prior CLIP variants up to GeoRSCLIP for classification. However, a comprehensive comparison with PIR-CLIP and other models on classic cross-modal retrieval tasks is missing.
 \end{itemize}
 
 \begin{figure}[h]
     \centering
     \includegraphics[width=\textwidth]{img/PIRCLIP_summary_results.png}
-    \caption{Comparison of model performance on standard image-to-text and text-to-image retrieval datasets RSICD \cite{lu2017exploring} and RSITMD \cite{yuan2022exploring}. Despite not being strictly correlated to classification performances, this task is more common in evaluation of remote sensing CLIP-like models and the most documented one for performance cross-checking. As of the original paper \cite{pan2024pir}, $\dagger$ represents zero-shot CLIP and $\ddagger$ fine-tuned CLIP.}
+    \caption{\normalsize Comparison of model performance on standard image-to-text and text-to-image retrieval datasets RSICD \cite{lu2017exploring} and RSITMD \cite{yuan2022exploring}. Despite not being strictly correlated to classification performances, this task is more common in the evaluation of remote sensing CLIP-like models and is the most documented one for performance cross-checking. As of the original paper \cite{pan2024pir}, $\dagger$ represents zero-shot CLIP and $\ddagger$ fine-tuned CLIP.}
     \label{fig:pirclip}
 \end{figure}
 
 
-So, a plurality of models has already been proposed. They all share a common methodological pipeline: collect RS image–caption pairs with more or less sophisticated techniques, fine-tune CLIP vision and text encoders via contrastive loss, and achieve more and more significant gains over vanilla CLIP. However, they all remain RGB-bound, ignoring multispectral information in datasets with up to $13$ spectral bands like Sentinel‑2. Moreover, the fine-tuning process is computationally demanding and typically requires large-scale domain-specific data, which is why many of these models have been presented as a result of studies about construction of remote sensing \emph{datasets}. Efficiency on standard hardware is also limited by the increasing model sizes.
+So, a plurality of models has already been proposed. They all share a common methodological pipeline: collect RS image–caption pairs with more or less sophisticated techniques, fine-tune CLIP vision and text encoders via contrastive loss, and achieve more and more significant gains over vanilla CLIP. However, they all remain RGB-bound, ignoring multispectral information in datasets with up to $13$ spectral bands like Sentinel‑2. Moreover, the fine-tuning process is computationally demanding and typically requires large-scale domain-specific data, which is why many of these models have been presented as a result of studies about the construction of remote sensing \emph{datasets}. Efficiency on standard hardware is also limited by the increasing model sizes.
 
 
 \section{MSI Approaches}
 
-According to the literature, only one work so far has dared to adventure into the domain of multispectral bands incorporating them into a CLIP model training process and underscoring the value of MSI data. A pioneering research conducted at IBM later this year: 
+According to the literature, only one work so far has dared to venture into the domain of multispectral bands, incorporating them into a CLIP model training process and underscoring the value of MSI data. A pioneering research conducted at IBM later this year: 
 
 \begin{itemize}
     \item \textbf{Llama3‑MS‑CLIP} (2025) \cite{marimo2025beyond}: this is a multispectral CLIP built via continued pretraining on a novel dataset created for the occasion, containing $\sim 1$ million of Sentinel 2‑based images captioned automatically using Llama3-LLaVA-Next \cite{li2024llava}, Overture Maps data and SSL4EO-S12 \cite{wang2023ssl4eo} metadata. This variant achieved superior zero-shot classification and textual retrieval performance, outperforming RGB-based counterparts across multiple benchmarks as shown in Figure \ref{fig:msclip}.
@@ -150,11 +152,11 @@ According to the literature, only one work so far has dared to adventure into th
 \begin{figure}[h]
     \centering
     \includegraphics[width=0.8\textwidth]{img/MS-CLIP.png}
-    \caption{Zero-shot classification and text-to-image retrieval results, measured respectively in accuracy and mAP percentages. The multispectral CLIP outperforms other RGB-based models on most of the benchmarks tested \cite{marimo2025beyond}.}
+    \caption{\normalsize Zero-shot classification and text-to-image retrieval results, measured respectively in accuracy and mAP percentages. The multispectral CLIP outperforms other RGB-based models on most of the benchmarks tested \cite{marimo2025beyond}.}
     \label{fig:msclip}
 \end{figure}
 
-This approach clearly demonstrates the effectiveness of multispectral input. Although, it comes at a high computational cost: large infrastructure, significant GPU hours for training and complex caption-generation pipelines. At the time this thesis is being compiled, assets remain unreleased, which limits reproducibility. Therefore, and even more so, we respond to the need of a more lightweight and usable solution. In the following chapters, we explore a different strategy to leverage multispectral richness while retaining the zero-shot and fine-tunable capabilities of CLIP-like models.
+This approach clearly demonstrates the effectiveness of multispectral input. Although, it comes at a high computational cost: large infrastructure, significant GPU hours for training and complex caption-generation pipelines. At the time this thesis is being compiled, assets remain unreleased, which limits reproducibility. Therefore, and even more so, we respond to the need for a more lightweight and usable solution. In the following chapters, we explore a different strategy to leverage multispectral richness while retaining the zero-shot and fine-tunable capabilities of CLIP-like models.
 
 
 %\chapter{Vision-Language Models}  % ---------------------------
@@ -172,9 +174,9 @@ This approach clearly demonstrates the effectiveness of multispectral input. Alt
 
 \chapter{The CLIP Model} % ------------------------------------
 
-The OpenAI's \textbf{CLIP (Contrastive Language-Image Pretraining)} model \cite{radford2021learning} was presented in 2021 and represents a pivotal leap in Vision-Language modeling, designed to learn a unified representation of images and texts. By jointly training on a large-scale diverse dataset of images and their corresponding textual descriptions, CLIP encodes both modalities into a shared embedding space, learning a combined representation that is ideal for many cross-modal purposes without requiring a specific fine-tuning. As a result, the model proves incredibly flexible and effective across image classification, image-to-text or text-to-image retrieval, image segmentation, object detection tasks and more.
+The OpenAI's \textbf{CLIP (Contrastive Language-Image Pretraining)} model \cite{radford2021learning} was presented in 2021 and represents a pivotal leap in Vision-Language modeling, designed to learn a unified representation of images and texts. By jointly training on a large-scale, diverse dataset of images and their corresponding textual descriptions, CLIP encodes both modalities into a shared embedding space, learning a combined representation that is ideal for many cross-modal purposes without requiring a specific fine-tuning. As a result, the model proves incredibly flexible and effective across image classification, image-to-text or text-to-image retrieval, image segmentation, object detection tasks and more. \\
 
-The core working principle behind CLIP is \emph{Contrastive Learning} (CL), a methodology that falls under the umbrella of Self Supervised Learning (SSL). In conceptual terms, the model is trained to maximize the similarity between matching image-text pairs and minimize the similarity between mismatched pairs. This approach enables meaningful cross-modal alignment and allows the model to generalize to unseen data and tasks involving an open vocabulary, making it highly versatile for real-world applications. In Figure \ref{fig:clip} the overall structure of CLIP is displayed: this model comprises two encoders for the two different input modalities, and pretrains them together to align the similar input pairs leveraging the InfoNCE contrastive loss function. Once the inputs are encoded in the shared embedding space, the dot product calculates the similarity between the embeddings.
+The core working principle behind CLIP is \emph{Contrastive Learning} (CL), a methodology that falls under the umbrella of Self Supervised Learning (SSL). In conceptual terms, the model is trained to maximize the similarity between matching image-text pairs and minimize the similarity between mismatched pairs. This approach enables meaningful cross-modal alignment and allows the model to generalize to unseen data and tasks involving an open vocabulary, making it highly versatile for real-world applications. In Figure \ref{fig:clip}, the overall structure of CLIP is displayed: this model comprises two encoders for the two different input modalities, and pretrains them together to align similar input pairs leveraging the InfoNCE contrastive loss function. Once the inputs are encoded in the shared embedding space, the dot product calculates the similarity between the embeddings.
 
 CLIP yields a number of notable benefits:
 
@@ -194,7 +196,7 @@ The CLIP model is built around a symmetric dual-encoder architecture, visible in
 \begin{figure}[h]
     \centering
     \includegraphics[width=\textwidth]{img/CLIP-structure.png}
-    \caption{The CLIP model is composed by two encoders for the two visual and textual data modalities, and employs a contrastive loss function to project the input embeddings into a shared embedding space \cite{radford2021learning}.}
+    \caption{\normalsize The CLIP model is composed of two encoders for the two visual and textual data modalities, and employs a contrastive loss function to project the input embeddings into a shared embedding space \cite{radford2021learning}.}
     \label{fig:clip}
 \end{figure}
 
@@ -208,7 +210,7 @@ The \textbf{Image Encoder} in CLIP is tasked with converting an input image into
     \item A Vision Transformer (ViT) \cite{dosovitskiy2020image}, encompassing the ViT-B, ViT-L and ViT-H variants, which divides the input image into a sequence of fixed-size patches, flattens and projects them linearly, adds positional encodings, and processes them via a standard Transformer encoder stack.
 \end{itemize}
 
-In both cases, the output is a single vector embedding of size $512$ and normalized to unit length. The ViT version (specifically ViT-B/32) has quickly become the most common in the literature relevant to the study conducted in this thesis; it operates on $224\times224$ RGB images further split into $32\times32$ patches. A suitable pipeline of transforms is provided to preprocess input images and convert them into this required format. The Transformer encoder is composed of $12$ layers, with $768$ hidden dimensions and $12$ attention heads, followed by a projection head to map the output to $512$ dimensions. The authors have released several checkpoints for models belonging to both the ResNet and the ViT families.
+In both cases, the output is a single vector embedding of size $512$ and normalized to unit length. The ViT version (specifically ViT-B/32) has quickly become the most common in the literature relevant to the study conducted in this thesis; it operates on $224\times224$ RGB images further split into $32\times32$ patches. A suitable pipeline of transforms is provided to preprocess input images and convert them into the required format. The Transformer encoder is composed of $12$ layers, with $768$ hidden dimensions and $12$ attention heads, followed by a projection head to map the output to $512$ dimensions. The authors have released several checkpoints for models belonging to both the ResNet and the ViT families.
 To decide which one to adopt, a careful review was conducted. ViTs have grown in popularity in remote sensing tasks due to their ability to model long-range dependencies and spatial relationships across an image without the locality constraints of convolutional layers. This was demonstrated, among others, by \cite{tuli2021convolutional} who proved the superiority of ViT-B/32 versus ResNet-50 and also its higher consistency with human mistakes; by \cite{dosovitskiy2020image}, who showed how applying the Transformer architecture directly to sequences of images patches would reshape the field of computer vision; multiple other studies confirmed these results \cite{deininger2022comparative}, \cite{hutten2022vision}, \cite{liu2024multivariate}, asserting the superiority of ViTs on CNNs in generalization and making them especially suitable for our case. For these reasons, and based on the most common backbones already tested in the relevant literature, the \emph{ViT-B/32} has been chosen as the go-to architecture for this project and all the reported results are based on it.
 
 \subsection{Text Encoder}
@@ -236,12 +238,12 @@ of a {label}."
 
 \section{Contrastive Learning}
 
-Contrastive Learning is a subfield of Self-Supervised Learning that aims to learn general-purpose representations by distinguishing between similar (positive) and dissimilar (negative) pairs of inputs. It has emerged as a powerful alternative to supervised learning, particularly when large annotated datasets are unavailable, and became a popular approach working at the core of several models in addition to CLIP. In CL, the model is not just trained to predict fixed labels as in standard supervised learning, but to learn embeddings that reflect the semantic similarity between input instances - possibly coming from multiple modalities.
+Contrastive Learning is a subfield of Self-Supervised Learning that aims to learn general-purpose representations by distinguishing between similar (positive) and dissimilar (negative) pairs of inputs. It has emerged as a powerful alternative to supervised learning, particularly when large annotated datasets are unavailable, and has become a popular approach working at the core of several models in addition to CLIP. In CL, the model is not just trained to predict fixed labels as in standard supervised learning, but to learn embeddings that reflect the semantic similarity between input instances - possibly coming from multiple modalities.
 The gist of this mechanism is that models can learn robust features by maximizing the agreement between positive pairs (e.g., an image and its corresponding text description), while minimizing agreement with randomly sampled negative pairs. In this way, CL teaches the model to preserve semantic structure in the learned embedding space without relying on class labels. 
 The CLIP model adopts a contrastive learning strategy based on the \emph{Information Noise Contrastive Estimation (InfoNCE) loss}, which was first formalized in \cite{sohn2016improved} and then popularized in \cite{oord2018representation}. This loss function enables the model to meaningfully align image–text pairs in a shared embedding space, ensuring that each image is at the same time close to its true caption and other relevant ones and far from unrelated ones.
 Contrastive objectives are designed to maximize the \emph{mutual information} between different views or modalities of the same underlying signal. For instance, image–text pairs or future–past representations in time series may share high-level structure such as object categories, spatial configuration, or narrative content, even if their raw signals differ substantially. Classical losses such as Mean Squared Error (MSE) or Cross-Entropy (CE) do not directly encourage this alignment, actually failing to model abstract relationships.
 The InfoNCE objective, instead, addresses this issue by modeling the problem as a slightly modified form of \emph{Noise Contrastive Estimation (NCE)} \cite{gutmann2010noise} \cite{mnih2012fast} \cite{jozefowicz2016exploring}, where the goal is to discriminate a positive pair from a set of negatives. In this formulation, the contrastive task can be thought of as a sort of binary classification problem, where the correct (positive) item must be selected among a pool of candidates.
-Following the theoretical framework outlined in by \cite{oord2018representation}, we will now proceed to give a formal definition of the InfoNCE loss. Let $x_{t+k}$ be the future target observation and $c_t$ a context vector representing the past or conditioning signal. Instead of directly modeling the conditional distribution $p(x_{t+k} | c_t)$, which is generally high-dimensional and difficult to treat, CL introduces a scoring function $f_k(x_{t+k}, c_t)$ that is proportional to the ratio of true conditional and marginal distributions:
+Following the theoretical framework outlined in \cite{oord2018representation}, we will now proceed to give a formal definition of the InfoNCE loss. Let $x_{t+k}$ be the future target observation and $c_t$ a context vector representing the past or conditioning signal. Instead of directly modeling the conditional distribution $p(x_{t+k} | c_t)$, which is generally high-dimensional and difficult to treat, CL introduces a scoring function $f_k(x_{t+k}, c_t)$ that is proportional to the ratio of true conditional and marginal distributions:
 
 \begin{equation}\label{f_x}
     f_k(x_{t+k}, c_t) \propto \frac{p(x_{t+k}|c_t)}{p(x_{t+k})}
@@ -253,7 +255,7 @@ This ratio represents the amount of information shared between $x$ and $c$. In p
     f_k(x_{t+k}, c_t) = \exp \left( z^T_{t+k} W_k c_t \right),
 \end{equation}
 
-where $z_x$ is the embedding of the target, $c_t$ is the context and $W_k$ is a learned projection matrix. This score is then used in a softmax-like function over a set of $N$ samples where $1$ is a positive sample and $N - 1$ are the negative ones. At this point, let $X = \{x_1, \, x_2, \, \ldots, \, x_N\}$ be a set of samples with one positive instance from $p(x_{t+k} | c_t)$  and the other negatives from $p(x_{t+k})$. The InfoNCe objective to optimize is then defined as:
+where $z_x$ is the embedding of the target, $c_t$ is the context and $W_k$ is a learned projection matrix. This score is then used in a softmax-like function over a set of $N$ samples, where $1$ is a positive sample and $N - 1$ are the negative ones. At this point, let $X = \{x_1, \, x_2, \, \ldots, \, x_N\}$ be a set of samples with one positive instance from $p(x_{t+k} | c_t)$  and the other negatives from $p(x_{t+k})$. The InfoNCe objective to optimize is then defined as:
 
 \begin{equation}\label{InfoNCE}
     \mathcal{L}_N = -\mathbb{E}_X \left[ \log \frac{f_k(x_{t+k}, \, c_t)}{\sum_{x_j \in X} f_k(x_j, c_t)} \right]
@@ -265,7 +267,7 @@ This can be interpreted as the negative log-likelihood of the correct pair under
     I(x;c) = \sum_{x, c} p(x, c) \log \frac{p(x|c)}{p(x)}
 \end{equation}
 
-During pretraining, CLIP creates an instance discrimination for each batch and optimizes the InfoNCE loss in both directions, image-to-text and text-to-image \cite{radford2021learning} \cite{liu2024remoteclip}. Consider a batch consisting in $N$ (image, text) pairs. The image encoder produces embeddings $\{i_1, \ldots, i_N\}$ and the text encoder embeddings $\{t_1, \ldots, t_N\}$. The similarity matrix $S \in \mathbb{R}^{N \times N}$ is then computed via cosine similarity, i.e. normalized dot product of the embedding vectors:
+During pretraining, CLIP creates an instance discrimination for each batch and optimizes the InfoNCE loss in both directions, image-to-text and text-to-image \cite{radford2021learning} \cite{liu2024remoteclip}. Consider a batch consisting of $N$ (image, text) pairs. The image encoder produces embeddings $\{i_1, \ldots, i_N\}$ and the text encoder embeddings $\{t_1, \ldots, t_N\}$. The similarity matrix $S \in \mathbb{R}^{N \times N}$ is then computed via cosine similarity, i.e. normalized dot product of the embedding vectors:
 
 \begin{equation}\label{sim_matrix}
     S_{ij} = \frac{i_i^Tt_j}{\|i_i\| \| t_j\|}
@@ -292,13 +294,13 @@ A smaller $\tau$ sharpens the distribution, making the model more confident in i
 \section{Zero-Shot Capabilities}
 
 In computer vision, zero-shot learning traditionally refers to the ability to recognize categories that were not seen during training, something that occurs when training and test classes are disjoint \cite{lampert2009learning}. In more recent literature, the definition has expanded to encompass more general forms of transfer learning, where models are evaluated on tasks, categories, or even datasets that are entirely unseen during training.
-CLIP introduces an unprecedentedly effective form of zero-shot learning thanks to the robustness of contrastive learning and a large corpus of pretraining image-text pairs. During inference, classification is achieved not only through a conventional softmax over learned weights, but via a nearest-neighbor search in a shared embedding space: images and candidate text prompts are embedded independently, and the most closest pair in the embedding space determines the classification final choice. The procedure of using CLIP as a zero-shot classifier is depicted in Figure \ref{fig:clipzs1}: the text encoder embeds class descriptions based on labels, like
-"a photo of a plane", "a photo of a cat", "a photo of a dog" etc. while the image encoder embeds the input image(s). By computing the dot product between the image embedding and all candidate text embeddings, CLIP returns the most semantically appropriate label (in this case, "dog"). 
+CLIP introduces an unprecedentedly effective form of zero-shot learning thanks to the robustness of contrastive learning and a large corpus of pretraining image-text pairs. During inference, classification is achieved not only through a conventional softmax over learned weights, but via a nearest-neighbor search in a shared embedding space: images and candidate text prompts are embedded independently, and the closest pair in the embedding space determines the classification final choice. The procedure of using CLIP as a zero-shot classifier is depicted in Figure \ref{fig:clipzs1}: the text encoder embeds class descriptions based on labels, such as
+\texttt{"a photo of a plane"}, \texttt{"a photo of a cat"}, \texttt{"a photo of a dog"} etc. while the image encoder embeds the input image(s). By computing the dot product between the image embedding and all candidate text embeddings, CLIP returns the most semantically appropriate label (in this case, \texttt{"dog"}). 
 
 \begin{figure}[h]
     \centering
     \includegraphics[width=\textwidth]{img/CLIP-zero-shot.png}
-    \caption{When using CLIP for zero-shot inference, a user can feed the model custom text and image inputs and obtain similarity scores that quantify how relevant each instance of one modality is to the other.}
+    \caption{\normalsize When using CLIP for zero-shot inference, a user can feed the model custom text and image inputs and obtain similarity scores that quantify how relevant each instance of one modality is to the other.}
     \label{fig:clipzs1}
 \end{figure}
 
@@ -307,14 +309,14 @@ This zero-shot transfer ability makes CLIP extremely flexible and represents its
 \begin{figure}[h]
     \centering
     \includegraphics[width=\textwidth]{img/CLIP_zero_shot.png}
-    \caption{}
+    \caption{Image taken from the original paper \cite{radford2019language}: visualizing distribution shift for the class bananas. The performance of CLIP is compared with ResNet-101, a model that has the same performance on the ImageNet validation set.}
     \label{fig:clipzs2}
 \end{figure}
 
-This generalization ability is directly attributable to the scale and diversity of CLIP's pretraining data, as well as its use of natural language supervision. CLIP was trained on a massive proprietary dataset known as \emph{WebImageText (WIT)}, comprising more than $400$ million image–text pairs scraped from the Internet. In an era dominated by social media, there is a massive abundance of data featuring images associated with text in the most disparate domains and language styles. The dataset was built selecting approximately $500,000$ search queries derived from Wikipedia and then ensuring that at least $20,000$ image–text pairs per query were present. Therefore, WIT does not rely on simple class labels, but allows the model to learn from freely occurring captions, descriptions, and alt-text. These naturally occurring annotations are often richer and more descriptive than the labels contained in conventional datasets, capturing both primary and contextual elements within a scene and enabling CLIP to cover a wide range of visual concepts, objects, activities, styles, and scenes.
+This generalization ability is directly attributable to the scale and diversity of CLIP's pretraining data, as well as its use of natural language supervision. CLIP was trained on a massive proprietary dataset known as \emph{WebImageText (WIT)}, comprising more than $400$ million image–text pairs scraped from the Internet. In an era dominated by social media, there is a massive abundance of data featuring images associated with text in the most disparate domains and language styles. The dataset was built by selecting approximately $500,000$ search queries derived from Wikipedia and then ensuring that at least $20,000$ image–text pairs per query were present. Therefore, WIT does not rely on simple class labels, but allows the model to learn from freely occurring captions, descriptions, and alt-text. These naturally occurring annotations are often richer and more descriptive than the labels contained in conventional datasets, capturing both primary and contextual elements within a scene and enabling CLIP to cover a wide range of visual concepts, objects, activities, styles, and scenes.
 
 \begin{comment}
-(from clip's paper)
+(from CLIP's paper)
 we match the accuracy of the original ResNet-50 on ImageNet zero-shot without needing to use any of the 1.28 million training examples it was trained on.
 
 The zero shot transfer capability of CLIP is what still today makes it an incredibly powerful and robust choice: so much so, that despite being an "old" model (released back in 2021), it's still widely adopted in both research and industry-level technology. 
@@ -333,7 +335,7 @@ The model implements a large-scale, multimodal pretraining framework on a broad 
 \begin{figure}[h]
     \centering
     \includegraphics[width=\textwidth]{img/remoteclip-retrieval-performance.png}
-    \caption{Cross-modal retrieval results of RemoteCLIP. Previous SOTA are highlighted in red, while RemoteCLIP results are marked in blue.}
+    \caption{\normalsize Cross-modal retrieval results of RemoteCLIP. Previous SOTA are highlighted in red, while RemoteCLIP results are marked in blue.}
     \label{fig:remoteclip-performance}
 \end{figure}
 
@@ -346,11 +348,11 @@ To build a considerable pretraining corpus, RemoteCLIP employs two data harmoniz
 These augmentations result in a dataset approximately $12$ times larger than prior remote sensing captioning corpora. The final training set integrates the following:
 \begin{enumerate}
     \item \textbf{RET-3}: retrieval data for continual pretraining: three major image-text datasets for remote sensing, i.e., RSICD, RSITMD and UCM. These datasets have high caption quality as they were annotated by humans, but a small dataset size;
-    \item \textbf{DET-10} detection data: major source for dataset expansion including six remote sensing datasets with object detection annotations, including DOTA, DIOR, HRRSD, RSOD, LEVIR and HRSC. These datasets have higher resolution and domain diversity than the previous group;
+    \item \textbf{DET-10} detection data: major source for dataset expansion, including six remote sensing datasets with object detection annotations, including DOTA, DIOR, HRRSD, RSOD, LEVIR and HRSC. These datasets have higher resolution and domain diversity than the previous group;
     \item \textbf{SEG-4} segmentation data: includes four popular remote sensing semantic segmentation datasets, including Vaihingen, Postdam, iSAID and LoveDA.
 \end{enumerate}
 
-RemoteCLIP was trained using different Vision Transformer and ResNet backbones of different sizes in the 30-300 millions of parameters range and employs a 12-layer, 8-head Transformer text encoder. Performance on the three most famous RS retrieval benchmarks, evaluated through Recall@K and Mean Recall metrics, shows that RemoteCLIP significantly outperforms existing approaches in both text-to-image and image-to-text scenarios as shown in Figure \ref{fig:remoteclip-performance}), becoming the first strong general-purpose Vision-Language Foundation Model for remote sensing.
+RemoteCLIP was trained using different Vision Transformer and ResNet backbones of different sizes in the 30-300 million parameters range and employs a 12-layer, 8-head Transformer text encoder. Performance on the three most famous RS retrieval benchmarks, evaluated through Recall@K and Mean Recall metrics, shows that RemoteCLIP significantly outperforms existing approaches in both text-to-image and image-to-text scenarios, as shown in Figure \ref{fig:remoteclip-performance}), becoming the first strong general-purpose Vision-Language Foundation Model for remote sensing.
 
 \subsection{GeoRSCLIP}
 
@@ -359,7 +361,7 @@ Proposed in 2023 concurrently with RemoteCLIP, GeoRSCLIP \cite{zhang2024rs5m} re
 \begin{figure}[h]
     \centering
     \includegraphics[width=0.8\textwidth]{img/georsclip-framework.png}
-    \caption{Illustration of the framework proposed in the GeoRSCLIP paper.}
+    \caption{\normalsize Illustration of the framework proposed in the GeoRSCLIP paper.}
     \label{fig:georsclip-framework}
 \end{figure}
 
@@ -367,24 +369,23 @@ Multiple GeoRSCLIP versions are obtained by fine-tuning CLIP models (ViT-B/32, V
 
 \begin{itemize}
     \item \textbf{PUB11}: Eleven publicly available general-domain datasets filtered using RS-related keywords, including LAION2B-en, LAION400M, LAIONCOCO, COYO700M, CC3M, CC12M, YFCC15M, WIT, Redcaps, SBU, and Visual Genome. This accounts for 3 million pairs of satellite and aerial images and text;
-    \item \textbf{Augmented RS datasets}: remote sensing - specific datasets such as BigEarthNet, FMoW, and MillionAID, extended with generated captions obtained by BLIP-2 \cite{li2023blip}.
+    \item \textbf{Augmented RS datasets}: remote sensing-specific datasets such as BigEarthNet, FMoW, and MillionAID, extended with generated captions obtained by BLIP-2 \cite{li2023blip}.
 \end{itemize}
 
-To improve efficiency and enable model reuse, the authors investigate a family of Parameter-Efficient Fine-Tuning (PEFT) methods, including LoRA adapter \cite{hu2021loralowrankadaptationlarge}, Prefix Tuning adapter \cite{li2021prefix}, Pfeiffer adapter \cite{pfeiffer2020adapterfusion}, and UniPELT adapter \cite{mao2021unipelt} (a low-rank-approximated adapter, a prompt-based adapter, a vanilla adapter and a composite adapter). Fine-tuned variants are evaluated on zero-shot classification, cross-modal retrieval, and structured captioning tasks, consistently outperforming RemoteCLIP in reference retrieval scenarios as shown in Figure \ref{fig:georsclip-performance}. The GeoRSCLIP framework exemplifies how targeted domain adaptation, coupled with large-scale pretraining and efficient fine-tuning strategies, can achieve robust multimodal representations for remote sensing cross-modal tasks.
-
-\begin{figure}[H]
+\begin{figure}[h]
     \centering
     \includegraphics[width=0.8\textwidth]{img/georsclip-retrieval-performance.png}
-    \caption{Cross-modal retrieval results for different GeoRSCLIP models trained with R5M. The symbol $\dagger$ means testing on RSICD test dataset, while $\S$means testing on the RSITMD test dataset. Recall@1/5/10 and mean recall are computed. FT stands for Fine Tuning, and the tuning paradigm is specified in the second column.}
+    \caption{\normalsize Cross-modal retrieval results for different GeoRSCLIP models trained with R5M. The symbol $\dagger$ means testing on RSICD test dataset, while $\S$ means testing on the RSITMD test dataset. Recall@1/5/10 and mean recall are computed. FT stands for Fine Tuning, and the tuning paradigm is specified in the second column.}
     \label{fig:georsclip-performance}
 \end{figure}
 
+To improve efficiency and enable model reuse, the authors investigate a family of Parameter-Efficient Fine-Tuning (PEFT) methods, including LoRA adapter \cite{hu2021loralowrankadaptationlarge}, Prefix Tuning adapter \cite{li2021prefix}, Pfeiffer adapter \cite{pfeiffer2020adapterfusion}, and UniPELT adapter \cite{mao2021unipelt} (a low-rank-approximated adapter, a prompt-based adapter, a vanilla adapter and a composite adapter). Fine-tuned variants are evaluated on zero-shot classification, cross-modal retrieval, and structured captioning tasks, consistently outperforming RemoteCLIP in reference retrieval scenarios as shown in Figure \ref{fig:georsclip-performance}. The GeoRSCLIP framework exemplifies how targeted domain adaptation, coupled with large-scale pretraining and efficient fine-tuning strategies, can achieve robust multimodal representations for remote sensing cross-modal tasks.
 
 \subsection{SkyCLIP}
 
-The SkyCLIP model \cite{wang2024skyscript} was released in conjunction to the SkyScript dataset and is the result of CLIP fine-tuning on it. It was specifically designed to address the challenges of high-altitude and aerial image understanding. SkyScript was designed to address the lack of semantically rich, large-scale image–text collections in them remote sensing domain and together with RS5M \cite{zhang2024rs5m} represents one of the largest datasets available in this field, with its size of $2.6$ million image-text pairs automatically generated and filtered from an initial set of $5.2$ million samples and encompassing over $29,000$ distinct semantic tags. The dataset was constructed by combining high-resolution satellite imagery sampled at various spatial resolutions (from $0.1$m to $30$m GSD, ground sample distance) via Google Earth Engine, with semantic metadata extracted from OpenStreetMap (OSM). Raw OSM tags were then converted into free-form natural language captions and filtered using CLIP-based similarity scoring, retaining the top $30$ to $50\%$ highest quality pairs.
+The SkyCLIP model \cite{wang2024skyscript} was released in conjunction with the SkyScript dataset and is the result of CLIP fine-tuning on it. It was specifically designed to address the challenges of high-altitude and aerial image understanding. SkyScript was designed to address the lack of semantically rich, large-scale image–text collections in them remote sensing domain and together with RS5M \cite{zhang2024rs5m} represents one of the largest datasets available in this field, with its size of $2.6$ million image-text pairs automatically generated and filtered from an initial set of $5.2$ million samples and encompassing over $29,000$ distinct semantic tags. The dataset was constructed by combining high-resolution satellite imagery sampled at various spatial resolutions (from $0.1$m to $30$m GSD, ground sample distance) via Google Earth Engine, with semantic metadata extracted from OpenStreetMap (OSM). Raw OSM tags were then converted into free-form natural language captions and filtered using CLIP-based similarity scoring, retaining the top $30\%$ to $50\%$ highest quality pairs.
 
-SkyScript is a dataset of comparatively high quality and high resolution images, accompanied by short to medium captions. Continual pretraining of a ViT-B and Vit-L CLIP backbones on this dataset resulted in a model which demonstrated strong zero-shot generalization abilities and overall similar capabilities to GeoRSCLIP, even though the authors didn't include it in evaluation experiments (see Figure \ref{fig:skyclip}). It did outperform CLIP baseline models both general purpose and remote sensing variants, including RemoteCLIP. SkyCLIP demonstrated overall good performances, and even without achieving the state of the art on any specific task or dataset it did surpass several supervised models which were trained directly on the test benchmarks and also improved on the original CLIP. These results highlight the value of the SkyScript dataset for VLM training and fine-tuning in the context of remote sensing.
+SkyScript is a dataset of comparatively high quality and high resolution images, accompanied by short to medium captions. Continual pretraining of a ViT-B and ViT-L CLIP backbones on this dataset resulted in a model that demonstrated strong zero-shot generalization abilities and overall similar capabilities to GeoRSCLIP, even though the authors didn't include it in evaluation experiments (see Figure \ref{fig:skyclip}). It did outperform CLIP baseline models, both general purpose and remote sensing variants, including RemoteCLIP. SkyCLIP demonstrated overall good performance, and even without achieving the state of the art on any specific task or dataset, it did surpass several supervised models that were trained directly on the test benchmarks and also improved on the original CLIP. These results highlight the value of the SkyScript dataset for VLM training and fine-tuning in the context of remote sensing.
 
 \begin{figure}[h]
     \centering
@@ -392,12 +393,14 @@ SkyScript is a dataset of comparatively high quality and high resolution images,
     {\includegraphics[width=.55\textwidth]{img/skyclip-performances.png} \vspace{0.5cm}} \quad
     \subfloat[][]
     {\includegraphics[width=.35\textwidth]{img/skyscript.png}}
-\caption{Images taken the the SkyScript original paper \cite{wang2024skyscript}. On the left, mean recall (\%) for benchmark cross-modal retrieval. SkyCLIP-30 is trained on the top $30\%$ SkyScript samples in terms of pairwise similarity. If a dataset is involved in training of a model, then it is bracketed with "()". On the right, a visual comparison of general-purpose RS datasets. Only datasets with $\ge 10,000$ images are shown). SkyScript, is two orders of magnitude more semantically diverse than existing remote sensing image-text datasets.}
+\caption{Images taken the the SkyScript original paper \cite{wang2024skyscript}. On the left, mean recall (\%) for benchmark cross-modal retrieval. SkyCLIP-30 is trained on the top $30\%$ SkyScript samples in terms of pairwise similarity. If a dataset is involved in the training of a model, then it is bracketed with "()". On the right, a visual comparison of general-purpose RS datasets. Only datasets with $\ge 10,000$ images are shown. SkyScript is two orders of magnitude more semantically diverse than existing remote sensing image-text datasets.}
 \label{fig:skyclip}
 \end{figure}
 
 
 \chapter{Datasets} % ------------------------------------------
+
+The quality, diversity, and design of datasets play a crucial role in assessing the performance and generalization capability of machine learning models. In this study, we rely on established benchmark datasets in remote sensing to evaluate and compare model performance across a range of classification tasks. This chapter is intended to introduce the datasets employed in our experiments, detailing their structure, characteristics, and relevance within the field. We begin with EuroSAT, a well-known and widely adopted dataset for land use classification, followed by GEO-Bench, a recent and comprehensive benchmark comprising multiple classification and segmentation datasets with varying complexity, spatial resolution, and spectral content. These resources collectively provide a robust testing ground for evaluating both zero-shot capability and multispectral learning strategies.
 
 \begin{comment}
     * disclaimer * - better to say this in the experimental setup probably
@@ -406,16 +409,15 @@ SkyScript is a dataset of comparatively high quality and high resolution images,
 
 \section{EuroSAT}\label{EuroSAT}
 
-The EuroSAT dataset \cite{helber2019eurosat} is perhaps the most well known and widely used benchmark in the remote sensing field for land use and land cover (LULC) classification. It is built upon the freely available collections of multispectral Sentinel-2 satellite imagery from ESA’s Copernicus program, and was explicitly designed to support research in Earth Observation using modern deep learning methods. In this thesis, EuroSAT has been used extensively: it served as a prototyping environment for model testing, exploration of normalization strategies and model training, representing the main reference point to contextualize the performance on other datasets. While EuroSAT is smaller and less diverse than more recent benchmarks (including but not limited to GEO-Bench \cite{lacoste2023geo}) it remains a critical resource thanks to its long-standing use in the literature, high accessibility and usability, and simple structure. EuroSAT consists of $27,000$ labeled and geo-referenced image patches, each measuring 64×64 pixels and captured across $13$ spectral bands by the Sentinel-2 satellite constellation. The dataset spans $10$ land use and land cover classes, carefully selected for their visibility at $10$m spatial resolution and prevalence across Europe: \emph{Annual Crop}, \emph{Permanent Crop}, \emph{Pasture}, \emph{Forest}, \emph{Herbaceous Vegetation}, \emph{Highway}, \emph{Residential Buildings}, \emph{Industrial Buildings}, \emph{River}, \emph{Sea/Lake}. Each class contains between $2,000$ and $3,000$ image samples, as evenly distributed as possible to avoid class imbalance. A handful of EuroSAT images spanning across all present labels is shown in Figure \ref{fig:eurosatgrid}, while a summary of the dataset characteristics is provided in Table \ref{tab:euclasstypes}. In order to ensure geographical diversity and seasonal variability, the patches were extracted from satellite scenes over the 34 European countries covered in the European Urban Atlas and specifically: Austria, Belarus, Belgium, Bulgaria, Cyprus, Czech Republic (Czechia), Denmark, Estonia, Finland, France, Germany, Greece, Hungary, Iceland, Ireland, Italy / Vatican City, Latvia, Lithuania, Luxembourg, Macedonia, Malta, Republic of Moldova, Netherlands, Norway, Poland, Portugal, Romania, Slovakia, Slovenia, Spain, Sweden, Switzerland, Ukraine and United Kingdom. An extra effort was put into excluding cloud-covered or visually corrupted samples and all the images have all been manually checked. The labels selection process tried to emphasized both inter- and intra-class diversity, as much as it could be captured at the given resolution: for example, the label "Forest" doesn't differentiate between coniferous or broadleaf types of woods, while "Industrial Buildings" and "Residential Buildings" are considered much more easy to distinguish at this level of visibility. The EuroSAT dataset was released in two versions, an RGB-only and an MSI one: they only differ in the amount of image data made available.
+The EuroSAT dataset \cite{helber2019eurosat} is perhaps the most well-known and widely used benchmark in the remote sensing field for land use and land cover (LULC) classification. It is built upon the freely available collections of multispectral Sentinel-2 satellite imagery from ESA’s Copernicus program, and was explicitly designed to support research in Earth Observation using modern deep learning methods. In this thesis, EuroSAT has been used extensively: it served as a prototyping environment for model testing, exploration of normalization strategies and model training, representing the main reference point to contextualize the performance on other datasets. While EuroSAT is smaller and less diverse than more recent benchmarks (including but not limited to GEO-Bench \cite{lacoste2023geo}), it remains a critical resource thanks to its long-standing use in the literature, high accessibility and usability, and simple structure. EuroSAT consists of $27,000$ labeled and geo-referenced image patches, each measuring 64×64 pixels and captured across $13$ spectral bands by the Sentinel-2 satellite constellation. The dataset spans $10$ land use and land cover classes, carefully selected for their visibility at $10$m spatial resolution and prevalence across Europe: \texttt{Annual Crop}, \texttt{Permanent Crop}, \texttt{Pasture}, \texttt{Forest}, \texttt{Herbaceous Vegetation}, \texttt{Highway}, \texttt{Residential Buildings}, \texttt{Industrial Buildings}, \texttt{River}, \texttt{Sea/Lake}. Each class contains between $2,000$ and $3,000$ image samples, as evenly distributed as possible to avoid class imbalance. A handful of EuroSAT images spanning across all present labels is shown in Figure \ref{fig:eurosatgrid}, while a summary of the dataset characteristics is provided in Table \ref{tab:euclasstypes}. In order to ensure geographical diversity and seasonal variability, the patches were extracted from satellite scenes over the 34 European countries covered in the European Urban Atlas and specifically: Austria, Belarus, Belgium, Bulgaria, Cyprus, Czech Republic (Czechia), Denmark, Estonia, Finland, France, Germany, Greece, Hungary, Iceland, Ireland, Italy / Vatican City, Latvia, Lithuania, Luxembourg, Macedonia, Malta, Republic of Moldova, Netherlands, Norway, Poland, Portugal, Romania, Slovakia, Slovenia, Spain, Sweden, Switzerland, Ukraine and United Kingdom. An extra effort was put into excluding cloud-covered or visually corrupted samples and all the images have all been manually checked. The labels selection process tried to emphasized both inter- and intra-class diversity, as much as it could be captured at the given resolution: for example, the label "Forest" doesn't differentiate between coniferous or broadleaf types of woods, while "Industrial Buildings" and "Residential Buildings" are considered much more easy to distinguish at this level of visibility. The EuroSAT dataset was released in two versions, an RGB-only and an MSI one: they only differ in the amount of image data made available.
 
-\begin{wrapfloat}{figure}{I}{0pt} % I inner margin, O outer margin
+\begin{wrapfloat}{figure}{O}{0pt} % I inner margin, O outer margin
     \includegraphics[width=0.4\textwidth]{img/EuroSAT_paper.png}
-    \caption{Example taken from \cite{helber2019eurosat} showing different Sentinel-2 based image patches extracted to identify different land use and land cover classes in the EuroSAT dataset.}
-    \vspace{-0.7cm}
-\label{fig:eurosatpatch}
+    \caption{\normalsize Example taken from \cite{helber2019eurosat} showing different Sentinel-2 based image patches extracted to identify different land use and land cover classes in the EuroSAT dataset.}
+    \label{fig:eurosatpatch}
 \end{wrapfloat}
 
-In this thesis, we used both: the former for RGB performance baselines and the latter for MSI model training, respectively. EuroSAT MSI is a dataset rich in multispectral information, accounting for 13 total bands captured by Sentinel-2's optical sensors for each image. They cover the visible (RGB), near-infrared (NIR), red edge, and short-wave infrared (SWIR) regions of the electromagnetic spectrum as described in detail in Table \ref{tab:sentinel2_bands}. This makes EuroSAT an ideal candidate for developing and evaluating models that leverage information beyond the standard RGB channels.
+In this thesis, we used both: the former to assess RGB performance baselines and the latter to implement MSI model training, respectively. EuroSAT MSI is a dataset rich in multispectral information, accounting for 13 total bands captured by Sentinel-2's optical sensors for each image. They cover the visible (RGB), near-infrared (NIR), red edge, and short-wave infrared (SWIR) regions of the electromagnetic spectrum as described in detail in Table \ref{tab:sentinel2_bands}. This makes EuroSAT an ideal candidate for developing and evaluating models that leverage information beyond the standard RGB channels.
 EuroSAT patches were collected by sampling cloud-free Sentinel-2 tiles over urban and rural areas included in the European Urban Atlas. The selection process emphasized intra-class diversity by sampling across seasons and regions. For example, the “Forest” class includes both coniferous and broadleaf types, while “Industrial Buildings” and “Residential Buildings” are derived from urban fabric classes in the Atlas mapping guide. All images are georeferenced, allowing spatial correlation with GIS layers. The dataset was released in a patch-based form to simplify training and evaluation for classification and retrieval models that, as a matter of fact, have been widely using EuroSAT for the great support it provides to supervised land cover classification with standard ML/DL pipelines, benchmarking of zero-shot and multimodal models and exploration of multispectral embeddings and band-wise information gain.
 
 \vspace{0.5cm}
@@ -423,12 +425,13 @@ EuroSAT patches were collected by sampling cloud-free Sentinel-2 tiles over urba
 \begin{figure}[h]
     \centering
     \includegraphics[width=\textwidth]{img/EuroSAT_image_grid.png}
-    \caption{Sample images from the 10 classes contained in the EuroSAT original dataset.}
+    \caption{\normalsize Sample images from the 10 classes contained in the EuroSAT original dataset.}
     \label{fig:eurosatgrid}
+    \vspace{0.5cm}
 \end{figure}
 
 
-\begin{table}[ht]
+\begin{table}[h]
 \centering
 \footnotesize
 \renewcommand{\arraystretch}{1.2}
@@ -445,7 +448,7 @@ EuroSAT patches were collected by sampling cloud-free Sentinel-2 tiles over urba
 \end{table}
 
 
-\begin{table}[ht]
+\begin{table}[H]
 \centering
 \scriptsize
     \begin{tabular}{lccl}
@@ -509,7 +512,7 @@ B12 - SWIR 2 & 20 & 2190 & Helps in soil and mineral discrimination, snow and fi
 
 \section{GEO-Bench}
 
-The GEO-Bench dataset suite \cite{lacoste2023geo} was introduced in 2023 with the goal of promoting the evaluation of general-purpose models on Earth Observation data. Its aim is to provide a comprehensive and unified framework for benchmarking large-scale models, either vision-only or vision-language, across multiple geospatial tasks, sensors, and input typology. To this purpose, the benchmark combines data from a variety of Earth Observation satellite missions and sources, focusing on both practical diversity and scientific relevance, and ensuring global geographical coverage as shown in Figure \ref{fig:geoworld}. GEO-Bench comprises 12 total datasets:
+The GEO-Bench dataset suite \cite{lacoste2023geo} was introduced in 2023 with the goal of promoting the evaluation of general-purpose models on Earth Observation data. Its aim is to provide a comprehensive and unified framework for benchmarking large-scale models, either vision-only or vision-language, across multiple geospatial tasks, sensors, and input typologies. To this purpose, the benchmark combines data from a variety of Earth Observation satellite missions and sources, focusing on both practical diversity and scientific relevance, and ensuring global geographical coverage as shown in Figure \ref{fig:geoworld}. GEO-Bench comprises 12 total datasets:
 \begin{itemize}
     \item 6 dedicated to classification tasks;
     \item 6 dedicated to segmentation tasks.
@@ -520,7 +523,7 @@ In this work, we exclusively focus on the \emph{classification} datasets, which 
     \item \textbf{m-pv4ger}: binary classification (detecting presence of rooftop solar panels, firstly presented in \cite{mayer20223d});
     \item \textbf{m-forestnet}: multiclass classification (identify deforestation drivers, first appearing in \cite{irvin2020forestnet});
     \item \textbf{m-eurosat}: multiclass classification (identify land use and cover with deep learning methods, originally presented in \cite{helber2019eurosat});
-    \item \textbf{m-so2sat}: multiclass classification (idenfity local climate zones, first introduced in  \cite{zhu2019so2sat});
+    \item \textbf{m-so2sat}: multiclass classification (identify local climate zones, first introduced in  \cite{zhu2019so2sat});
     \item \textbf{m-bigearthnet}: multilabel classification (identify relevant land cover phrases, originally proposed by \cite{sumbul2021bigearthnet}).
 \end{itemize}
 Each dataset originates from independent research projects and applications, and they vary significantly in terms of image resolution, class structure, geographic coverage, and number of spectral bands used. Then, they were randomly sampled and uniformly preprocessed to guarantee a unified source of data in the benchmark. Since datasets are "modified", their names were prepended with a starting "m-" to distinguish them from the original version.
@@ -529,7 +532,7 @@ Each dataset originates from independent research projects and applications, and
 \begin{figure}[h]
     \centering
     \includegraphics[width=\textwidth]{img/geobench-datasets-classification-info-cut.png}
-    \caption{Characteristics of datasets in the benchmark \cite{lacoste2023geo}.}
+    \caption{\normalsize Characteristics of datasets in the benchmark \cite{lacoste2023geo}.}
     \label{fig:geoinfo}
 \end{figure}
 
@@ -537,14 +540,21 @@ Each dataset originates from independent research projects and applications, and
 \vspace{-0.5cm}
 \paragraph{Multispectral Properties}
 
-One of the main strengths of GEO-Bench, and the main reason why it was chosen for this work, lies in its extensive use of multispectral and multi-sensor data. Each dataset contains satellite imagery processed from sources such as the Sentinel-1, Sentinel-2, and Landsat-8 constellations, including a total amount of spectral bands that ranges from 3 and 18. These bands go beyond RGB visible light and span through near-infrared (NIR), short-wave infrared (SWIR), red edge, and specialized atmospheric channels. This makes GEO-Bench especially relevant for testing the generalization capacity of models over multispectral data. The fundamental properties of the MSI channels are general, as they only depend on the sensor, and below we report a brief summary. For more details, see Table \ref{tab:sentinel2_bands}.
+One of the main strengths of GEO-Bench, and the main reason why it was chosen for this work, lies in its extensive use of multispectral and multisensor data. Each dataset contains satellite imagery processed from sources such as the Sentinel-1, Sentinel-2, and Landsat-8 constellations, including a total amount of spectral bands that ranges from 3 and 18. These bands go beyond RGB visible light and span through near-infrared (NIR), short-wave infrared (SWIR), red edge, and specialized atmospheric channels. This makes GEO-Bench especially relevant for testing the generalization capacity of models over multispectral data. The fundamental properties of the MSI channels are general, as they only depend on the sensor, and below we report a brief summary. For more details, see Table \ref{tab:sentinel2_bands}.
 \begin{itemize}
-    \item RGB (B02–B04): used for standard visual interpretation and land classification;
-    \item Red Edge (B05–B08A): useful for crop monitoring and vegetation health analysis;
+    \item RGB (B02–B04): used for standard visual interpretation and land use/land cover classification;
+    \item Red Edge (B05–B08A): useful for crop monitoring and vegetation health analysis in combination with other bands;
     \item NIR (B08): used for biomass estimation and vegetation indexes;
     \item SWIR (B11–B12): applied for burn area mapping and mineral detection;
-    \item Water vapor and cirrus (B09–B10): used for atmospheric analysis and structure detection.
+    \item Water vapor and cirrus (B09–B10): used for atmospheric analysis and some types of structure detection.
 \end{itemize}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.6\textwidth]{img/geobench_world_coverage.png}
+    \caption{\normalsize The world coverage of different datasets of the benchmark, as reported in \cite{lacoste2023geo}.}
+    \label{fig:geoworld}
+\end{figure}
 
 \paragraph{Diversity of tasks}
 
@@ -552,20 +562,13 @@ In terms of machine learning paradigms, the classification datasets are designed
 \begin{enumerate}[i)]
     \item \textbf{Binary Classification}: distinguishing between two binary outcomes, e.g. detection of a specific element in an image (m-brick-kiln, m-pv4ger);
     \item \textbf{Multiclass Classification}: selecting one class that best describes the images from multiple mutually exclusive options (m-forestnet, m-eurosat, m-so2sat);
-    \item \textbf{Multilabel Classification}: selecting multiple non-exclusive labels that are relevant for each image (m-bigearthnet). This is a more complex task and typically leveraged in scenarios where the focus is on the whole content of an image rather than on a specific object, like image-to-text retrieval and image understanding or captioning. 
+    \item \textbf{Multilabel Classification}: selecting multiple non-exclusive labels that are relevant for each image (m-bigearthnet). This is a more complex task and is typically leveraged in scenarios where the focus is on the whole content of an image rather than on a specific object, like image-to-text retrieval and image understanding or captioning. 
 \end{enumerate}
 Given the nature of CLIP-based models, label predictions are extracted based on the similarity computed by the model between the image and the labels embeddings; the multilabel setting requires a different approach, as we explain in detail in a following section.
 
+\vspace{0.5cm}
 
-\begin{figure}[h]
-    \centering
-    \includegraphics[width=0.6\textwidth]{img/geobench_world_coverage.png}
-    \caption{The world coverage of different datasets of the benchmark, as reported in \cite{lacoste2023geo}.}
-    \label{fig:geoworld}
-\end{figure}  
-
-
-\begin{table}[ht]
+\begin{table}[h]
 \centering
 \footnotesize
 \renewcommand{\arraystretch}{1.2}
@@ -589,15 +592,16 @@ Given the nature of CLIP-based models, label predictions are extracted based on 
 \subsection{m-brick-kiln}
 
 The m-brick-kiln dataset is a binary classification dataset curated to support the detection of brick kilns: a "kiln" is a kind of furnace where bricks are "baked". Brick kilns are small scale industrial structures known for their high levels of pollution, especially prevalent across South Asia and representing a significant source of carbon emissions and air pollution. Monitoring their presence and compliance with environmental regulations is a key step in addressing the environmental challenges posed by informal and unregulated industrial activity.
-The original work that inspired this dataset focused on the accurate study about identification of illegal brick kilns across Bangladesh using high-resolution imagery and machine learning models \cite{lee2021scalable}. However, due to the proprietary nature of the original data, GEO-Bench offers a public alternative by replacing the input modality with Sentinel-2 imagery acquired via Google Earth Engine, maintaining alignment with the original study’s ground truth annotations.
-The dataset contains image patches with size of 64$\times64$ pixels and spanning across 13 spectral bands (B01 through B12, excluding B10 due to preprocessing), with each patch labeled as either:
+The original work that inspired this dataset focused on the accurate study about the identification of illegal brick kilns across Bangladesh using high-resolution imagery and machine learning models \cite{lee2021scalable}. However, due to the proprietary nature of the original data, GEO-Bench offers a public alternative by replacing the input modality with Sentinel-2 imagery acquired via Google Earth Engine, maintaining alignment with the original study’s ground truth annotations.
+The dataset contains image patches with a size of 64$\times64$ pixels and spanning across 13 spectral bands (B01 through B12, excluding B10 due to preprocessing), with each patch labeled as either:
 
 \begin{itemize}
-    \item $1$: "not brick kiln" (no brick kiln is present);
-    \item $0$: "brick kiln" (a brick kiln is present);
+    \item $1$: \texttt{brick kiln} (a brick kiln is present);
+    \item $0$: \texttt{not brick kiln} (no brick kiln is present).
 \end{itemize}
 
-\vspace{-0.3cm}
+Multiple image samples from both classes are shown in Figure \ref{fig:brickgrid}, to give an idea of what brick kilns look like from a satellite perspective and how they differ from images that do not contain any. The image patches are extracted from the time window between October 2018 and May 2019, matching the observation period of the original kiln location survey. The derived subset provided by GEO-Bench includes $17,061$ following official splits in train, validation and test sets while preserving class proportions. All patches are stored in HDF5 format with metadata including geolocation bounds and class labels.
+This dataset represents a practical and non-trivial binary classification task, given the medium-low resolution of the images. That's why it is highly relevant for testing fine-grained detection capacity in VLMs like CLIP. Additionally, the inclusion of all 13 Sentinel-2 bands makes it ideal to test and compare model performances on different multispectral inputs.
 
 \begin{figure}[h]
     \centering
@@ -607,20 +611,16 @@ The dataset contains image patches with size of 64$\times64$ pixels and spanning
     \label{fig:brickgrid}
 \end{figure}
 
-Multiple image samples from both classes are shown in Figure \ref{fig:brickgrid}, to give an idea of what brick kilns look like from a satellite perspective and how they differ from images that do not contain any. The image patches are extracted from the time window between October 2018 and May 2019, matching the observation period of the original kiln location survey. The derived subset provided by GEO-Bench includes $17,061$ following official splits in train, validation and test sets while preserving class proportions. All patches are stored in HDF5 format with metadata including geolocation bounds and class labels.
-This dataset represents a practical and non-trivial binary classification task, given the medium-low resolution of the images. That's why it is highly relevant for testing fine grained detection capacity in VLMs like CLIP. Additionally, the inclusion of all 13 Sentinel-2 bands makes it ideal to test and compare model performances on different multispectral input.
-
 
 \subsection{m-pv4ger}
 
-The m-pv4ger dataset is another binary classification benchmark designed to identify the presence of photovoltaic (PV) systems on rooftops relying on satellite imagery. The task is of significant relevance to energy infrastructure monitoring and sustainability planning, as solar PV installations are increasingly deployed at residential and industrial scales. However, due to their highly decentralized and small-scale nature, PV systems are difficult to track with traditional inventory methods. Therefore, in the original work associated with this dataset the authors introduced a 3D-PV-Locator \cite{mayer20223d}, a hybrid approach combining aerial imagery and 3D building data to estimate both the position and orientation (azimuth and tilt) of PV systems across Germany. While the full 3D pipeline involves complex processing steps, the GEO-Bench version simplifies this to a yes/no classification task: detecting whether or not a PV system is present in the given image patch. The dataset includes $320\times 320$ Sentinel-2 image patches annotated as follows:
+The m-pv4ger dataset is another binary classification benchmark designed to identify the presence of photovoltaic (PV) systems on rooftops relying on satellite imagery. The task is of significant relevance to energy infrastructure monitoring and sustainability planning, as solar PV installations are increasingly deployed at residential and industrial scales. However, due to their highly decentralized and small-scale nature, PV systems are difficult to track with traditional inventory methods. Therefore, in the original work associated with this dataset, the authors introduced a 3D-PV-Locator \cite{mayer20223d}, a hybrid approach combining aerial imagery and 3D building data to estimate both the position and orientation (azimuth and tilt) of PV systems across Germany. While the full 3D pipeline involves complex processing steps, the GEO-Bench version simplifies this to a yes/no classification task: detecting whether or not a PV system is present in the given image patch. The dataset includes $320\times 320$ Sentinel-2 image patches annotated as follows:
 
 \begin{itemize}
-    \item $1$: "no solar panel" (no solar panel is present);
-    \item $0$: "solar panel" (a solar panel is present);
+    \item $1$: \texttt{solar panel} (a solar panel is present);
+    \item $0$: \texttt{no solar panel} (no solar panel is present).
 \end{itemize}
 
-\vspace{-0.3cm}
 
 \begin{figure}[h]
     \centering
@@ -630,16 +630,16 @@ The m-pv4ger dataset is another binary classification benchmark designed to iden
     \label{fig:solargrid}
 \end{figure}
 
-Multiple image samples from both classes are shown in Figure \ref{fig:brickgrid} for visual reference. It's important to highlight that m-pv4ger is a \emph{RGB-only} dataset, an isolated case in the whole GEO-bench collection, where only the three Reg, Green and Blue bands are provided. To ensure accurate annotations, all original imagery was collected over the regions of Germany and the positive samples were matched to the national solar panel registry. The dataset version found in GEO-Bench accounts for $13,812$ images split into training, validation, and test subsets, again preserving class balance across all splits.
-Compared to m-brick-kiln, the visual cues that define PV systems are easier to detect given the overall higher resolution of the image data. For its characteristics, m-pv4ger brings great diversity to GEO-Bench and represents a relevant use-case for practical applications in energy forecasting, smart grid planning, and green infrastructure monitoring, strengthening its utility in broader EO model evaluation frameworks.
+Multiple image samples from both classes are shown in Figure \ref{fig:brickgrid} for visual reference. It's important to highlight that m-pv4ger is a \emph{RGB-only} dataset, an isolated case in the whole GEO-bench collection, where only the three Red, Green and Blue bands are provided. To ensure accurate annotations, all original imagery was collected over the regions of Germany and the positive samples were matched to the national solar panel registry. The dataset version found in GEO-Bench accounts for $13,812$ images split into training, validation, and test subsets, again preserving class balance across all splits.
+Compared to m-brick-kiln, the visual cues that define PV systems are easier to detect, given the overall higher resolution of the image data. For its characteristics, m-pv4ger brings great diversity to GEO-Bench and represents a relevant use case for practical applications in energy forecasting, smart grid planning, and green infrastructure monitoring, strengthening its utility in broader EO model evaluation frameworks.
 
 
 \subsection{m-forestnet}
 
 The m-forestnet dataset tackles a more subtle and complex classification task: identifying the main direct drivers of primary forest loss in tropical regions, with a particular focus on Indonesia. Forest loss is a major contributor to global greenhouse gas emissions and loss of biodiversity, and understanding its most common underlying causes is critical for designing effective conservation and land use policies.
 Originally developed in the ForestNet study by Irvin et al. \cite{irvin2020forestnet}, the dataset consists of Landsat-8 satellite imagery paired with expert-annotated labels that identify the primary driver of forest degradation in each image patch. These drivers span both natural and anthropogenic categories and include activities such as plantation expansion, smallholder agriculture, mining, infrastructure development, and wildfires.
-In GEO-Bench, this dataset has been adapted to a multiclass classification problem with 12 classes, each one corresponding to a unique cause of deforestation. The task is notably challenging to tackle with general-purpose VLMs, due to its high specificity and the striking resemblance of the images at a first glance. The GEO-Bench dataset version consists of $8,446$ image patches centered around a region of forest loss, delimited by contours as shown in Figure \ref{fig:forestnetgrid}. Each patch has size $332 \times 332$, the highest image quality of the benchmark, drawn from multispectral imagery with $6$ available bands determined by the Landsat-8 sensor configuration. These are generally mismatched from the ones provided by Sentinel-2, therefore special attention was given to re-ordering the multispectral channels before passing the images to our models, as described in following sections.
-The inclusion of m-forestnet in GEO-Bench adds important semantic depth and increased task complexity to the benchmark. Here the model needs to be able to distinguish fine-grained and high-level land use patterns, in images apparently very similar to each other.
+In GEO-Bench, this dataset has been adapted to a multiclass classification problem with 12 classes, each one corresponding to a unique cause of deforestation: \texttt{oil palm plantation}, \texttt{timber plantation}, \texttt{other large-scale plantations}, \texttt{grassland shrubland}, \texttt{small-scale agriculture}, \texttt{small-scale mixed plantation}, \texttt{small-scale oil palm plantation}, \texttt{mining}, \texttt{fish pond}, \\ \texttt{logging}, \texttt{secondary forest}, \texttt{other}. The task is notably challenging to tackle with general-purpose VLMs, due to its high specificity and the striking resemblance of the images at a first glance. The GEO-Bench dataset version consists of $8,446$ image patches centered around a region of forest loss, delimited by contours as shown in Figure \ref{fig:forestnetgrid}. Each patch has size $332 \times 332$, the highest image quality of the benchmark, drawn from multispectral imagery with $6$ available bands determined by the Landsat-8 sensor configuration. These are generally mismatched with respect to the ones provided by Sentinel-2; therefore, special attention was given to re-ordering the multispectral channels before passing the images to our models, as described in the following sections.
+The inclusion of m-forestnet in GEO-Bench adds important semantic depth and increased task complexity to the benchmark. Here, the model needs to be able to distinguish fine-grained and high-level land use patterns, in images apparently very similar to each other.
 
 \vspace{0.3cm}
 
@@ -653,22 +653,24 @@ The inclusion of m-forestnet in GEO-Bench adds important semantic depth and incr
 
 \subsection{m-eurosat}
 
-The m-eurosat dataset is a multispectral adaptation of the well-known EuroSAT \cite{helber2019eurosat} described in the previous section \ref{EuroSAT}. Originally designed for land use and land cover classification based on Sentinel-2 imagery, the GEO-Bench version features the same 10 mutually exclusive land cover classes and has been adapted to follow the standardized format of the benchmark. The image patches have still size $64 \times 64$ and have been selected in a subset of $4,000$ samples, always ensuring class balance. Compared to the original EuroSAT, this version features standardizes data formatting to conform to GEO-Bench's unified structure and stored in HDF5 format to encode labels and task metadata along with the images. While not substantially changing the input data or labels with respect to the original dataset, m-eurosat contributes to the robustness of GEO-Bench and plays a useful role to evaluate models on a comprehensive set of applications, in addition to enabling direct comparisons with earlier literature that used the original dataset. A glimpse of m-eurosat samples is visible below in Figure \ref{fig:meurosatgrid}.
+The m-eurosat dataset is a multispectral adaptation of the well-known EuroSAT \cite{helber2019eurosat} described in the previous section \ref{EuroSAT}. Originally designed for land use and land cover classification based on Sentinel-2 imagery, the GEO-Bench version features the same 10 mutually exclusive land cover classes and has been adapted to follow the standardized format of the benchmark. The image patches have still size $64 \times 64$ and have been selected in a subset of $4,000$ samples, always ensuring class balance. Compared to the original EuroSAT, this version features standardized data formatting to conform to GEO-Bench's unified structure and is stored in HDF5 format to encode labels and task metadata along with the images. While not substantially changing the input data or labels with respect to the original dataset, m-eurosat contributes to the robustness of GEO-Bench and plays a useful role in evaluating models on a comprehensive set of applications, in addition to enabling direct comparisons with earlier literature that used the original dataset. A glimpse of m-eurosat samples is visible below in Figure \ref{fig:meurosatgrid}.
 
 
-\begin{figure}[h]
+\begin{figure}[H]
     \centering
     \includegraphics[width=\textwidth]{img/m-eurosat_image_grid.png}
     \caption{\normalsize Sample images from the 10 classes contained in the m-eurosat dataset from GEO-Bench.}
     \label{fig:meurosatgrid}
 \end{figure}
 
+\vspace{1cm}
+
 
 \subsection{m-so2sat}
 
 The m-so2sat dataset is derived from the So2Sat LCZ42 benchmark \cite{zhu2019so2sat}, originally developed to support automated classification of Local Climate Zones (LCZs) in urban environments across the globe. LCZs are part of a standardized framework used to describe urban morphology and land cover, incorporating physical characteristics such as building morphology, density, surface materials, and vegetation cover, all key variables for understanding socio-environmental patterns.
-The GEO-Bench version, m-so2sat, transforms this problem into a multiclass classification task with 17 classes. Each image patch is associated to a single LCZ type and is drawn from a global pool of 42 urban agglomerations and 10 smaller cities, spanning multiple continents. This broad spatial coverage is a key strength of the dataset, encouraging the evaluation of models under strong domain shifts and geographic variability.
-The dataset featured in GEO-Bench contains pre-aligned Sentinel-2 multispectral imagery, which has been downsampled to a $32 \times 32$ patch size, harmonized to include 18 spectral bands (12 original ones, some of them are further split into real and imaginary channels) and paired with LCZ annotations originally created by a team of 15 domain experts using a rigorous labeling workflow and cross-validation procedure.
+The GEO-Bench version, m-so2sat, transforms this problem into a multiclass classification task with 17 classes: \texttt{compact high rise}, \texttt{compact mid rise}, \texttt{compact low rise}, \texttt{open high rise}, \texttt{open mid rise}, \texttt{open low rise}, \texttt{lightweight low rise}, \texttt{large low rise}, \texttt{sparsely built}, \texttt{heavy industry}, \texttt{dense trees}, \texttt{scattered trees}, \texttt{bush/scrub}, \texttt{low plants}, \texttt{bare rock or paved}, \texttt{bare soil or sand}, \texttt{water}. Each image patch is associated to a single LCZ type and is drawn from a global pool of 42 urban agglomerations and 10 smaller cities, spanning multiple continents. This broad spatial coverage is a key strength of the dataset, encouraging the evaluation of models under strong domain shifts and geographic variability.
+The dataset featured in GEO-Bench contains pre-aligned Sentinel-2 multispectral imagery, which has been downsampled to a $32 \times 32$ patch size, harmonized to include 18 spectral bands (12 original ones; some of them are further split into real and imaginary channels) and paired with LCZ annotations originally created by a team of 15 domain experts using a rigorous labeling workflow and cross-validation procedure.
 The low image quality and high label specificity of m-so2sat make it a strongly challenging benchmark for assessing generalization across urban morphologies. From a modeling perspective, LCZ classification is a more complex and structural task than purely physical land cover labeling, making it an interesting case for model evaluation.
 
 
@@ -679,16 +681,18 @@ The low image quality and high label specificity of m-so2sat make it a strongly 
     \label{fig:so2satgrid}
 \end{figure}
 
+\newpage
 
 \subsection{m-bigearthnet}
 
-The m-bigearthnet dataset is the multispectral, multilabel classification task derived from the BigEarthNet-MM project \cite{sumbul2021bigearthnet}. Unlike previous GEO-Bench datasets, which are binary or multiclass in nature, m-bigearthnet introduces a multilabel setting, where each image may belong to multiple land cover categories simultaneously as shown in Figure \ref{fig:bengrid}. This more realistically reflects complex, mixed-use landscapes such as forested urban scenes, agriculture mosaics with water courses, bare rock islands or mountainous shrublands.
-The GEO-Bench variant of this dataset is restricted to Sentinel-2 multispectral imagery only and contains $22,000$ image patches and corresponding labels from a pool of 43 land cover classes, based on the CORINE Land Cover (CLC) Level-3 nomenclature from 2018 (slightly refined to improve label coherence). In GEO-Bench, the m-bigearthnet dataset has been reformatted into $120\times 120$ images with 12 multispectral bands, again split into training, validation, and test partitions consistent with other GEO-Bench tasks. The labels are provided in the form of binary label vectors representing one-hot encoded multilabel annotations per image. Each label vector includes between 1 and 12 active labels, with a mean of 5-6 labels per image. This requires a Vision-Language model like CLIP to compute the labels prediction with different strategies, as the task increases in complexity in many ways: the labels may contain semantic overlap, e.g. "pasture" and "agricultural land", there are issues of label imbalance, with some captions occurring more often and other more rarely, not to mention noisy annotations, that occasionally don't reflect all the true content of an image due to the fact that they were generated in an automatic, therefore not perfect way. Despite these complexities, m-bigearthnet is an invaluable benchmark for evaluating real-world multi-concept classification in remote sensing. With its scale, diversity, and affinity to human-like capabilities, it completes the GEO-Bench collection providing an intriguing stress-testing for models that aim to scale beyond simple classification schemes.
+The m-bigearthnet dataset is the multispectral, multilabel classification task derived from the BigEarthNet-MM project \cite{sumbul2021bigearthnet}. Unlike previous GEO-Bench datasets, which are binary or multiclass in nature, m-bigearthnet introduces a multilabel setting, where each image may belong to multiple land cover categories simultaneously, as shown in Figure \ref{fig:bengrid}. This more realistically reflects complex, mixed-use landscapes such as forested urban scenes, agriculture mosaics with water courses, bare rock islands or mountainous shrublands.
+The GEO-Bench variant of this dataset is restricted to Sentinel-2 multispectral imagery only and contains $22,000$ image patches and corresponding labels from a pool of 43 land cover classes, based on the CORINE Land Cover (CLC) Level-3 nomenclature from 2018 (slightly refined to improve label coherence): \texttt{agro-forestry areas}, \texttt{airports}, \texttt{annual crops associa-}\\
+\texttt{ted with permanent crops}, \texttt{bare rock}, \texttt{beaches, dunes, sands}, \texttt{broad-leaved forest}, \texttt{burnt areas}, \texttt{coastal lagoons}, \texttt{complex cultivation patterns}, \texttt{coni-}\\ \texttt{ferous forest}, \texttt{construction sites}, \texttt{continuous urban fabric}, \texttt{discontinuous urban fabric}, \texttt{dump sites}, \texttt{estuaries}, \texttt{fruit trees and berry plantations}, \texttt{green urban areas}, \texttt{industrial or commercial units}, \texttt{inland marshes}, \texttt{inter-} \\ \texttt{tidal flats}, \texttt{land principally occupied by agriculture, with significant areas of natural vegetation}, \texttt{mineral extraction sites}, \texttt{mixed forest}, \\ \texttt{moors and heathland}, \texttt{natural grassland}, \texttt{non-irrigated arable land}, \texttt{olive groves}, \texttt{pastures}, \texttt{peatbogs}, \texttt{permanently irrigated land}, \texttt{port areas}, \texttt{rice fields}, \texttt{road and rail networks and associated land}, \texttt{salines}, \texttt{salt marshes}, \texttt{sclerophyllous vegetation}, \texttt{sea and ocean}, \texttt{sparsely vegetated areas}, \texttt{sport and leisure facilities}, \texttt{transitional woodland/shrub}, \texttt{vineyards}, \texttt{water bo-} \\ \texttt{dies}, \texttt{water courses}. In GEO-Bench, the m-bigearthnet dataset has been reformatted into $120\times 120$ images with 12 multispectral bands, again split into training, validation, and test partitions consistent with other GEO-Bench tasks. The labels are provided in the form of binary label vectors representing one-hot encoded multilabel annotations per image. Each label vector includes between 1 and 12 active labels, with a mean of 5-6 labels per image. This requires a Vision-Language model like CLIP to compute the labels prediction with different strategies, as the task increases in complexity in many ways: the labels may contain semantic overlap, e.g. "pasture" and "agricultural land", there are issues of label imbalance, with some captions occurring more often and other more rarely, not to mention noisy annotations, that occasionally don't reflect all the true content of an image due to the fact that they were generated in an automatic, therefore not perfect way. Despite these complexities, m-bigearthnet is an invaluable benchmark for evaluating real-world multi-concept classification in remote sensing. With its scale, diversity, and affinity to human-like capabilities, it completes the GEO-Bench collection providing an intriguing stress-testing for models that aim to scale beyond simple classification schemes.
 
 \begin{figure}[h]
     \centering
     \includegraphics[width=\textwidth]{img/m-bigearthnet_image_grid.png}
-    \caption{Sample multilabel images featured in the m-bigearthnet dataset from GEO-Bench.}
+    \caption{\normalsize Sample multilabel images featured in the m-bigearthnet dataset from GEO-Bench.}
     \label{fig:bengrid}
 \end{figure}
 
@@ -702,9 +706,9 @@ Rather than retraining or fine-tuning the full CLIP model, which is a sound but 
 
 Multispectral satellite imagery in the considered datasets can contain an arbitrary number of spectral bands ranging from 3 to 13, based on the acquisition sensor the satellite is equipped with. However, CLIP’s original image encoder expects a standard 3-channel input and it's been pretrained entirely on RGB-only data. In this work, we propose a Multispectral Embedder (MSI Embedder from now on) to bridge this gap. The module consists of a shallow convolutional network, adaptable to either specific datasets (standard mode) or to a fixed input band configuration (transfer learning mode).
 
-\paragraph{Motivation} Directly retraining CLIP on multispectral data requires special hardware and consuming a lot of resources and time. In addition, this straightforward approach would need a remarkable amount of homogeneous multispectral imagery and proper annotations, a non-trivial process that also demands a considerable effort. Dataset collection and curation are fundamental for the advancement of machine learning applications in every field, but they are beyond the scope of this thesis. Our objective is to leverage CLIP’s generalization capabilities for a multispectral data source through an alternative engineering solution.
+\paragraph{Motivation} Directly retraining CLIP on multispectral data requires special hardware and consumes a lot of resources and time. In addition, this straightforward approach would need a remarkable amount of homogeneous multispectral imagery and proper annotations, a non-trivial process that also demands a considerable effort. Dataset collection and curation are fundamental for the advancement of machine learning applications in every field, but they are beyond the scope of this thesis. Our objective is to leverage CLIP’s generalization capabilities for a multispectral data source through an alternative engineering solution.
 
-\paragraph{Implementative details} The goal of the MSI embedder is to transform the high-dimensional, multispectral input with $n \ge 3$ bands into a $3$-channel feature map, that can then accepted by the CLIP image encoder - keeping its parameters frozen. 
+\paragraph{Implementative details} The goal of the MSI embedder is to transform the high-dimensional, multispectral input with $n \ge 3$ bands into a $3$-channel feature map, that can then be accepted by the CLIP image encoder, keeping its parameters frozen. 
 All the proposed embedders are convolutional modules composed of 1 to 4 layers, designed to project input tensors of shape $(C_{in}, H, W)$ to an output of shape $(C_{out} = 3, H, W)$, where $C_{in}$ is the number of input spectral bands, and $H, W$ are the spatial height and width dimensions. All embedders share this underlying logic and differ slightly in layers and parameters, depending on the case.
 
 \begin{comment}
@@ -735,11 +739,10 @@ The MSI-1 embedder (1 stands for 1 layer) is the simplest possible configuration
 
 \begin{itemize}
     \item \textbf{Structure}: a single $1\times1$ convolutional layer;
-    \item \textbf{Adaptability}: the number of input channels are set dynamically, so the embedder is trainable on any multispectral dataset of interest;
+    \item \textbf{Adaptability}: the number of input channels is set dynamically, so the embedder is trainable on any multispectral dataset of interest;
     \item \textbf{Output}: a 3-channel tensor ready to pass through the CLIP encoder.
 \end{itemize}
 
-\vspace{0.5cm}
 
 \begin{lstlisting}[language=Python, caption={MSI-1 Embedder implemented in Pytorch.}, label={lst:msi1}]
 # MSI1 Embedder class definition
@@ -763,7 +766,7 @@ class MSIEmbedder1(nn.Module):
 The MSI-2 embedder (2 stands for 2 layers) introduces a slightly deeper structure with two convolutional layers, enabling the model to learn more complex combinations of spectral features. This embedder provides more flexibility and expressive capacity, with around $\sim 1.1$k parameters. Its characteristics are:
 
 \begin{itemize}
-    \item \textbf{Structure}: two $1\times1$ convolutional layers, with non-linear activation functions interposed (specifically ReLU) after each layer. Specifically, the input channels are projected to $64$ intermediate hidden channels and then to the standard 3-channels output. The $1\times1$ convolution ensures that each spatial location is transformed independently, focusing entirely on channel-wise interactions;
+    \item \textbf{Structure}: two $1\times1$ convolutional layers, with non-linear activation functions interposed (specifically ReLU) after each layer. Specifically, the input channels are projected to $64$ intermediate hidden channels and then to the standard 3-channel output. The $1\times1$ convolution ensures that each spatial location is transformed independently, focusing entirely on channel-wise interactions;
     \item \textbf{Adaptability}: the input channels are again set dynamically;
     \item \textbf{Output}: again a 3-channel tensor.
 \end{itemize}
@@ -800,7 +803,7 @@ The MSI-T embedder (T stands for "transfer") is meant to support transfer learni
     \item \textbf{Output}: a $3$-channel tensor compatible with the CLIP image encoder.
 \end{itemize}
 
-This provides the model for spectral flexibility at inference time.
+This structure provides the model with spectral flexibility at inference time.
 
 \vspace{0.5cm}
 
@@ -832,7 +835,7 @@ class MSIEmbedder3(nn.Module):
 
 \subsection{MSI-T-4L Embedder}\label{sec:msi_t_4l}
 
-The MSI-T-4L embedder (T stands for "transfer", 4L for "four layers") embodies an attempt to increase the complexity of this module, along with the expressivity and soundness of the features it learns. It is purposely expanded with respect to the small networks presented so far, designed to better capture spatial patterns and feature interactions that may emerge across both the spectral and spatial dimensions of the MSI data. With approximately $37.8$k trainable parameters, this architecture significantly increases model capacity:
+The MSI-T-4L embedder (T stands for "transfer", 4L for "four layers") represents an attempt to increase the complexity of this module, along with the expressivity and soundness of the features it learns. It is purposely expanded with respect to the small networks presented so far, designed to better capture spatial patterns and feature interactions that may emerge across both the spectral and spatial dimensions of the MSI data. With approximately $37.8$k trainable parameters, this architecture significantly increases model capacity:
 
 \begin{itemize}
     \item \textbf{Structure}: four convolutional layers are stacked sequentially, each one followed by a non-linear ReLU activation function. Batch normalization is applied after each of the first three convolutional blocks to stabilize training and improve generalization. The first and last layers use a $1\times1$ kernel to mix spectral channels and reduce dimensionality, while the intermediate layers use $3\times3$ kernels with padding to preserve dimensions and introduce spatial awareness;
@@ -883,20 +886,18 @@ class MSIEmbedder3(nn.Module):
 
 \section{MSI + CLIP Model Structure}
 
-The complete pipeline combines the MSI embedder with a frozen CLIP model, as shown in Figure \ref{fig:model_pipeline}. The input is a fully multispectral image of shape $(C, H, W)$. After projection  the MSI module, a 3-channel tensor is obtained and passed to CLIP’s ViT-B/32 visual encoder. The text encoder is not modified and processes tokenized prompts obtained by combining the template \texttt{"a satellite photo of a \{label\}"} with the labels present in the training dataset, a standard practice \cite{radford2021learning} \cite{liu2024remoteclip} \cite{zhang2024rs5m}. Then, similarity scores between image and text embeddings are computed using cosine similarity in the traditional CLIP style.
+The complete pipeline combines the MSI embedder with a frozen CLIP model, as shown in Figure \ref{fig:model_pipeline}. The input is a fully multispectral image of shape $(C, H, W)$. After being projected through the MSI module, a 3-channel tensor is obtained and passed to CLIP’s ViT-B/32 visual encoder. The text encoder is not modified and processes tokenized prompts obtained by combining the template \texttt{"a satellite photo of a \{label\}"} with the labels present in the training dataset, a standard practice \cite{radford2021learning} \cite{liu2024remoteclip} \cite{zhang2024rs5m}. Then, similarity scores between image and text embeddings are computed using cosine similarity in the traditional CLIP style.
 
 \begin{figure}[h]
 \centering
 \includegraphics[width=\textwidth]{img/msi_clip_pipeline.png}
-\caption{The MSI + CLIP pipeline overview: a multispectral image is projected into 3-channel format using an MSI Embedder, then passed through the CLIP image encoder. Text prompts are based on a fixed templated and embedded separately. Cosine similarity scores are computed for label prediction.}
+\caption{\normalsize The MSI + CLIP pipeline overview: a multispectral image is projected into a 3-channel format using an MSI Embedder, then passed through the CLIP image encoder. Text prompts are based on a fixed template and embedded separately. Cosine similarity scores are computed for label prediction.}
 \label{fig:model_pipeline}
 \end{figure}
 
-
-
 \paragraph{Base Model} In the base configuration, the MSI-1 or MSI-2 embedder is initialized with the same number of input channels as the available band count in the dataset of interest. This allows to easily train a specialized MSI module for the case at hand, capturing spectral features pertaining to specific domains. CLIP’s weights remain frozen throughout, and only the embedder parameters are updated. In chapter \ref{Results}, we report the results of training both embedder types on all the GEO-Bench datasets.
 
-\paragraph{Transfer Learning Model} For generalization and transfer learning purposes, MSI-T models are trained on datasets with the highest amount of band availability. At inference time on a different data source, the new input images may feature multispectral bands that are ordered differently than the ones seen during training, or even just a subset of them. Thus, to ensure each band is preprocessed by the right set of parameters (e.g. the Blue channel by the parameters trained on the Blue, the Red channel by the parameters trained on the Red etc.), the bands are realigned through a band mapping and unavailable bands are padded with zeroes. This way, we ensure that band order is respected for stable transfer. This additional image preprocessing step is only used when applying one of the MSI-T embedders to other datasets and its pseudocode is illustrated in Listing \ref{lst:bandmapping}. These embedders can hance be trained once, and then reused on custom datasets. We evaluate their performance on the GEO-Bench dataset in Chapter \ref{Results}.
+\paragraph{Transfer Learning Model} For generalization and transfer learning purposes, MSI-T models are trained on datasets with the highest amount of band availability. At inference time on a different data source, the new input images may feature multispectral bands that are ordered differently than the ones seen during training, or even just a subset of them. Thus, to ensure each band is preprocessed by the right set of parameters (e.g. the Blue channel by the parameters trained on the Blue, the Red channel by the parameters trained on the Red etc.), the bands are realigned through a band mapping and unavailable bands are padded with zeroes. This way, we ensure that the band order is respected for stable transfer. This additional image preprocessing step is only used when applying one of the MSI-T embedders to other datasets and its pseudocode is illustrated in Listing \ref{lst:bandmapping}. These embedders can hence be trained once, and then reused on custom datasets. We evaluate their performance on the GEO-Bench dataset in Chapter \ref{Results}.
 
 \vspace{0.5cm}
 
@@ -928,19 +929,19 @@ for i, exp_b in enumerate(band_mapping.keys()):
 
 \chapter{Experimental Setup} % --------------------------------
 
-This chapter illustrates the experimental design used to answer our research questions. We will detail the experiments of interest, the models used, the testing configurations and the preprocessing strategies adopted to evaluate the effectiveness of the proposed MSI embedding architecture integrated with CLIP. While results and discussion are reserved to later sections, this chapter establishes the methodological foundation on which they rely.
+This chapter illustrates the experimental design used to answer our research questions. We will detail the experiments of interest, the models used, the testing configurations and the preprocessing strategies adopted to evaluate the effectiveness of the proposed MSI embedding architecture integrated with CLIP. While results and discussion are reserved for later sections, this chapter establishes the methodological foundation on which they rely.
 The scope of this work is limited to the task of \emph{image classification}, selected due to its universal validity, straightforward evaluation and widespread adoption in the literature: classification is particularly suitable for benchmarking the zero-shot and transfer learning capabilities of Vision-Language Models across binary, multiclass, and multilabel settings and compare them with the ones of other families of models. Our preliminary experiments in the RGB-only domain encompass:
 \begin{itemize}
-    \item Evaluation of existing CLIP-like models for zero-shot inference on the GEO-Bench datasets, collection and report of the baselines scores;
+    \item Evaluation of existing CLIP-like models for zero-shot inference on the GEO-Bench datasets, collection and report of the baseline scores;
     \item Evaluation of the original CLIP with modified text prompts to maximize performance on specific GEO-Bench datasets (the binary classification ones).
 \end{itemize}
-Next, we move to the fully multispectral domain focusing on the proposed MSI + CLIP architecture:
+Next, we move to the fully multispectral domain, focusing on the proposed MSI + CLIP architecture:
 \begin{itemize}
     \item We assess the impact of different image normalization techniques on model training convergence;
     \item Then we train end-to-end a version of the model with the MSI-1 embedder and one with the MSI-2 embedder for each dataset and report test accuracies;
     \item Finally, we evaluate the transfer learning capability of this architecture by training only on one dataset and testing on the others.
 \end{itemize}  
-In all experiments involving the proposed model, the CLIP modules are kept frozen and only the MSI embedder parameters are updated. The CLIP model chosen is the original one, with the ViT-B/32 image encoder version (i.e. base model size processing images in $32\times32$ patches).
+In all experiments involving the proposed model, the CLIP modules are kept frozen and only the MSI embedder parameters are updated. The CLIP model chosen is the original one, with the ViT-B/32 image encoder version (i.e. base model size, processing images in $32\times32$ patches).
 
 
 \section{Evaluation Metrics}
@@ -964,12 +965,12 @@ Most of the datasets in the benchmark have mutually exclusive classes, either bi
     $$
     \item \textbf{F1 Score}: harmonic mean of precision and recall;
     $$
-    \text{F1 score} = 2 \;\cdot\; \frac{\text{Precision} \;\cdot\; \text{Recall}}{\text{Precision} + \text{Recall}}
+    \text{F1 Score} = 2 \;\cdot\; \frac{\text{Precision} \;\cdot\; \text{Recall}}{\text{Precision} + \text{Recall}}
     $$
-    \item \textbf{Confusion Matrix}: visualization of per-class prediction errors. Rows generally represent ground truth and columns predictions, but swapped versions are common. In the binary case the confusion matrix has a simple size $2\times2$, that extends to $n \times n$ when there are $n$ labels. The corrected predictions are always held by the main diagonal, whereas the outer values indicate misclassifications.
+    \item \textbf{Confusion Matrix}: visualization of per-class prediction errors. Rows generally represent ground truth and columns predictions, but swapped versions are common. In the binary case the confusion matrix has a simple size $2\times2$, which extends to $n \times n$ when there are $n$ labels. The corrected predictions are always held by the main diagonal, whereas the outer values indicate misclassifications.
 \end{itemize}
 
-\paragraph{Multilabel Classification} For the m-bigearthnet dataset, each image may be associated with multiple labels. In this setting, typical  classification metrics can't be applied directly as images are not anymore associated to just one class prediction, but many. A plurality of metrics \cite{zhang2013review} have been proposed to evaluate this type of task, mostly borrowed from classification or retrieval settings and slightly modified to handle multiple predictions for each data sample. We employ a set of both example-based and label-based metrics:
+\paragraph{Multilabel Classification} For the m-bigearthnet dataset, each image may be associated with multiple labels. In this setting, typical classification metrics can't be applied directly as images are not associated to just one class prediction, but many. A plurality of metrics \cite{zhang2013review} have been proposed to evaluate this type of task, mostly borrowed from classification or retrieval settings and slightly modified to handle multiple predictions for each data sample. We employ a set of both example-based and label-based metrics:
 
 \begin{itemize}
     \item \textbf{Precision@k (P@k)} (example-based): precision computed over the top-$k$ predicted labels for a specific image, ranked by similarity. It measures how many of the top-$k$ predictions are actually correct.
@@ -980,7 +981,7 @@ Most of the datasets in the benchmark have mutually exclusive classes, either bi
     $$
     \text{Recall@k} = \frac{\text{Number of correct predictions in top-k}}{\text{Number of ground truth labels}}
     $$
-    \item \textbf{Mean Average Precision (mAP)} (example-based): simple average precision (AP) measures the area under the Precision-Recall curve for a single sample. mAP is the mean of APs across all samples \cite{zhang2013review}. Higher AP corresponds to better label ranking per image, implying that correct labels are retrieves earlier. Given $\mathcal{X}$ the example space of size $n$, $\mathcal{Y}$ the label space, $f:\mathcal{X} \times \mathcal{Y} \to \mathbb{R}$ the model returned by a multi-label learning system corresponding to a real-valued function where $f(x, y)$ can be regarded as the confidence of $y \in \mathcal{Y}$ being the proper label of $x$. Given a a multi-label example $(x, Y)$, $f(\cdot, \cdot)$ should return a larger output on the relevant label $y' \in Y$ than on the irrelevant label $y'' \not\in Y$. Then, for each sample $x_i$:
+    \item \textbf{Mean Average Precision (mAP)} (example-based): simple average precision (AP) measures the area under the Precision-Recall curve for a single sample. mAP is the mean of APs across all samples \cite{zhang2013review}. Higher AP corresponds to better label ranking per image, implying that correct labels are retrieved earlier. Given $\mathcal{X}$ the example space of size $n$, $\mathcal{Y}$ the label space, $f:\mathcal{X} \times \mathcal{Y} \to \mathbb{R}$ the model returned by a multi-label learning system corresponding to a real-valued function where $f(x, y)$ can be regarded as the confidence of $y \in \mathcal{Y}$ being the proper label of $x$. Given a multi-label example $(x, Y)$, $f(\cdot, \cdot)$ should return a larger output on the relevant label $y' \in Y$ than on the irrelevant label $y'' \not\in Y$. Then, for each sample $x_i$:
 
     $$
     AP_i(f)=\frac {1}{n} \,\sum _{i=1}^n \frac {1}{|Y_i|} \;\cdot\;\sum \limits _{y\in Y_i}\frac {|\{y'\mid rank_f({\boldsymbol x}_i,y')\leq rank_f({\boldsymbol x}_i,y),\,y'\in Y_i\}|}{rank_f({\boldsymbol x}_i,y)}
@@ -990,7 +991,7 @@ Most of the datasets in the benchmark have mutually exclusive classes, either bi
     mAP(f) = \frac{1}{n} \sum_{1=1}^n AP_i (f)
     $$
     
-    \item \textbf{Micro F1} (label-based): computes global TP, FP and FN across all labels before computing F1  following the standard definition. Micro-averaging treats each data instance equally, focusing on overall performances;
+    \item \textbf{Micro F1} (label-based): computes global TP, FP and FN across all labels before computing F1  following the standard definition. Micro-averaging treats each data instance equally, focusing on overall performance;
     
     \item \textbf{Ranking Loss} (label-based): evaluates the fraction of reversely ordered label pairs, i.e. the cases where an irrelevant label is ranked higher than a relevant one. Based on the same notation introduced for $mAP$:
     $$
@@ -1012,7 +1013,7 @@ Most of the datasets in the benchmark have mutually exclusive classes, either bi
 
 As an initial evaluation, we tested four CLIP-like VLMs - namely the standard CLIP, RemoteCLIP, GeoRSCLIP, and SkyCLIP - on the original EuroSAT dataset.
 
-\begin{wrapfloat}{table}{I}{0pt} % I inner margin, O outer margin
+\begin{wrapfloat}{table}{O}{0pt} % I inner margin, O outer margin
 \centering
 \footnotesize
 \renewcommand{\arraystretch}{1.2}
@@ -1027,9 +1028,9 @@ As an initial evaluation, we tested four CLIP-like VLMs - namely the standard CL
     \specialrule{.1em}{.2em}{.2em} \\
     \end{tabular}
 \vspace{0.3cm}
-\caption{\normalsize Comparison of zero-shot accuracies obtained by different models on the EuroSAT original dataset.}
+\caption{\normalsize Comparison of zero-shot accuracies obtained by different models on the original EuroSAT. }
 \label{tab:eurobaselines}
-\vspace{-1cm}
+\vspace{-0.3cm}
 \end{wrapfloat}
 
 All models are evaluated in zero-shot inference mode, leveraging only their pretrained encoders capabilities without any further fine-tuning. Results reveal how CLIP and RemoteCLIP yield relatively low and similar accuracies, while GeoRSCLIP and SkyCLIP achieve significantly higher scores. This behaviour can be better visualized in Figure \ref{fig:eurosatbaselinescm}, where the confusion matrices corresponding to each model are shown: while CLIP and RemoteCLIP's matrices appear somewhat fuzzy and struggle to recognize some entire classes, GeoRSCLIP and SkyCLIP's matrices feature a more definite diagonal with comparatively less misclassifications.
@@ -1120,7 +1121,7 @@ All models are evaluated in zero-shot inference mode, leveraging only their pret
 \subsection{CLIP-like Models on GEO-Bench}
 
 After a first test on EuroSAT, we extended the baseline evaluation to all classification datasets in GEO-Bench. Tables~\ref{tab:baselines} and~\ref{tab:baselines-multilab} report zero-shot classification metrics for binary, multiclass, and multilabel tasks. 
-These results serve a two-fold purposes: to begin with, to assess the generalization strength of existing RS-fine-tuned VLMs versus the original model on a challenging and comprehensive dataset collection, but also to establish reference scores against which our proposed MSI+CLIP models can be benchmarked. Once again, we found that CLIP and RemoteCLIP have overall very similar performances, RemoteCLIP often slightly lower, while the other models perform better on datasets with better image resolution and close to CLIP on datasets with low resolution. Overall, GeoRSCLIP turns out to be the model that obtains best scores on the highest number of datasets.
+These results serve a two-fold purpose: to begin with, to assess the generalization strength of existing RS-fine-tuned VLMs versus the original model on a challenging and comprehensive dataset collection, but also to establish reference scores against which our proposed MSI + CLIP models can be benchmarked. Once again, we found that CLIP and RemoteCLIP have overall very similar performances, RemoteCLIP often slightly lower, while the other models perform better on datasets with better image resolution and close to CLIP on datasets with low resolution. Overall, GeoRSCLIP turns out to be the model that obtains the best scores on the highest number of datasets.
 
 \vspace{0.5cm}
 
@@ -1175,7 +1176,7 @@ These results serve a two-fold purposes: to begin with, to assess the generaliza
 
 \section{Text Prompts Experiments}
 
-Zero-shot CLIP-based models depend heavily on text prompts. For multiclass classification, the prompt formulation is relatively robust due to the availability of diverse class labels which provides a comparatively wider range of options to match an image with. On the other hand, binary classification brings up an intrinsic challenge, especially when the negative class is framed via negation (e.g., "brick kiln" versus "not a brick kiln"), as in our case.
+Zero-shot CLIP-based models depend heavily on text prompts. For multiclass classification, the prompt formulation is relatively robust due to the availability of diverse class labels, which provides a comparatively wider range of options to match an image with. On the other hand, binary classification brings up an intrinsic challenge, especially when the negative class is framed via negation (e.g., "brick kiln" versus "not a brick kiln"), as in our case.
 Precedent studies \cite{quantmeyer2024and} have shown that CLIP struggles with semantic negation, making simple oppositional pairs of captions suboptimal. To address this, we experimented with alternative prompt formulations for the \emph{binary} classification datasets, including paraphrases and semantically diverse negative prompts, in an attempt to maximize the model's ability to discriminate between the two classes.
 Each image was compared to both a positive and a negative class prompt, formatted as usual as: \texttt{"a satellite photo of \{prompt\}"}.
 We focused on the original CLIP model and designed prompt templates of increasing complexity following two strategies:
@@ -1228,7 +1229,7 @@ The full list of prompts used for each dataset is summarized in Table \ref{tab:p
 \bottomrule
 \end{tabular}
 \vspace{0.3cm}
-\caption{Summary of text prompt variants used in the binary classification experiments for m-brick-kiln and m-pv4ger datasets. Each prompt is used within the template \texttt{"a satellite photo of \{prompt\}".}}
+\caption{\normalsize Summary of text prompt variants used in the binary classification experiments for m-brick-kiln and m-pv4ger datasets. Each prompt is used within the template \texttt{"a satellite photo of \{prompt\}".}}
 \label{tab:prompt_templates}
 \end{table}
 
@@ -1279,7 +1280,7 @@ While designing these templates specifically for CLIP, we also report the evalua
     \bottomrule
     \end{tabular}
 \vspace{0.3cm}
-\caption{\normalsize Accuracies achieved on m-pv4ger with different text prompts. Bold scores represent the most efficient prompt per each model.}
+\caption{\normalsize Accuracies achieved on m-pv4ger with different text prompts. Bold scores represent the most efficient prompt for each model.}
 \label{tab:prompts2}
 \end{table}
 
@@ -1287,30 +1288,30 @@ While designing these templates specifically for CLIP, we also report the evalua
 \section{Image Normalization Experiments}
 
 
-Multispectral imagery is represented by floating-point radiometric values that vary widely across spectral bands and scenes. To stabilize training of our MSI + CLIP architecture and ensure meaningful embeddings, we explored three normalization strategies applied to MSI input tensors:
+Multispectral imagery is represented by floating-point radiometric values that vary widely across spectral bands and scenes. To stabilize the training of our MSI + CLIP architecture and ensure meaningful embeddings, we explored three normalization strategies applied to MSI input tensors:
 
 \begin{enumerate}
     \item \textbf{Per-image min-max normalization}: normalizes one image at a time during input preprocessing, all channels together;
     \item \textbf{Per-image per-channel min-max normalization}: again normalizes one image at a time, but each image channel is independently normalized;
-    \item \textbf{Global per-channel normalization}: here, every channel of each image is normalized independently but using global statistics (mean and standard deviation) precomputed across the training dataset.
+    \item \textbf{Global per-channel normalization}: here, every channel of each image is normalized independently but using global statistics (mean and standard deviation) precomputed over the training dataset.
 \end{enumerate}
 
-The impact of each normalization function on the training and validation losses of our MSI + CLIP module on EuroSAT are shown in Figure \ref{fig:normlosses}.
+The impact of each normalization function on the training and validation losses of our MSI + CLIP module on EuroSAT is shown in Figure \ref{fig:normlosses}.
 
 \begin{figure}[h]
     \centering
     \includegraphics[width=\textwidth]{img/EuroSAT_norm_train_losses_plot.png}
     \includegraphics[width=\textwidth]{img/EuroSAT_norm_val_losses_plot.png}
-    \caption{The effect of different normalization functions on the convergence of the training and validation loss for the two different models.}
+    \caption{\normalsize The effect of different normalization functions on the convergence of the training and validation loss for the two different models.}
     \label{fig:normlosses}
 \end{figure}
 
-We observe that the first normalization method led to the fastest convergence for the MSI-1 Embedder, whereas the most stable and lowest loss for MSI-2 occurred with the third method. Since MSI-1 is a very minimal embedder, that we only report for completeness, and given the higher robustness of the third method to ensure statistical integrity of the images across the whole dataset, the global per-channel normalization is the one adopted for all subsequent experiments, unless otherwise stated.
+We observe that the first normalization method led to the fastest convergence for the MSI-1 Embedder, whereas the most stable and lowest loss for MSI-2 occurred with the third method. Since MSI-1 is a very minimal embedder, which we only report for completeness, and given the higher robustness of the third method to ensure statistical integrity of the images across the whole dataset, the global per-channel normalization is the one adopted for all subsequent experiments, unless otherwise stated.
 
 
 \chapter{Results}\label{Results} % -------------------------------------------
 
-This chapter presents the experimental results obtained using the proposed MSI + CLIP models. The evaluation is divided into two main sections: the first explores the results obtained when each embedder variant (MSI-1 and MSI-2) is trained on the same dataset it is later tested on; the second investigates the generalization capabilities of the more expressive MSI-T and MSI-T-4L embedders in a transfer learning setting, where the training and testing datasets differ. This dual approach enables the evaluation of our CLIP pipeline with multispectral integration in both task-specific adaptation, and cross-dataset generalization scenarios.
+This chapter presents the experimental results obtained using the proposed MSI + CLIP models. The evaluation is divided into two main sections: the first explores the results obtained when each embedder variant (MSI-1 and MSI-2) is trained on the same dataset it is later tested on; the second investigates the generalization capabilities of the more expressive MSI-T and MSI-T-4L embedders in a transfer learning setting, where the training and testing datasets differ. This dual approach enables the evaluation of our CLIP pipeline with multispectral integration in both task-specific adaptation and cross-dataset generalization scenarios.
 All models were trained for $100$ epochs on an NVIDIA A100-SXM-64GB GPU using a batch size of 
 $32$, a learning rate of $1\times10^{-3}$, and \texttt{num\_workers = 4} as the number of subprocesses to load data. During training, only the MSI embedders were updated while the CLIP backbone remained frozen in evaluation mode, accounting for $\sim 151$M untouched parameters. The number of trainable parameters in each embedder ranged from $42$ (MSI-1) to $37.8$k (MSI-T-4L).
 
@@ -1326,11 +1327,9 @@ The first training run was launched on the original EuroSAT dataset to assess th
 
 \subsection{GEO-Bench}
 
-The same training procedure was repeated for each of the GEO-Bench classification datasets. A different MSI + CLIP model was trained for every dataset using its respective training set and evaluated on the corresponding test set, following the default split sizes provided by the benchmark. Table~\ref{tab:geobenchmsi} presents the performance of the MSI-1 and MSI-2 embedders across five GEO-Bench datasets, highlighting their accuracy gains over the original zero-shot CLIP baseline. With the exception of MSI-1 on the m-so2sat dataset, both embedders yielded consistent and, in many cases, substantial improvements — reaching gains of up to $+25\%$. As expected, the MSI-1 embedder generally achieved smaller gains compared to MSI-2, reflecting its reduced capacity. The smallest improvements were observed on datasets characterized by low spatial resolution (e.g., m-so2sat) or increased task complexity, such as the fine-grained classification challenge posed by m-forestnet.
-
+The same training procedure was repeated for each of the GEO-Bench classification datasets. A different MSI + CLIP model was trained for every dataset using its respective training set and evaluated on the corresponding test set, following the default split sizes provided by the benchmark. Table~\ref{tab:geobenchmsi} presents the performance of the MSI-1 and MSI-2 embedders across five GEO-Bench datasets, highlighting their accuracy gains over the original zero-shot CLIP baseline. With the exception of MSI-1 on the m-so2sat dataset, both embedders yielded consistent and, in many cases, substantial improvements with gains of up to $+25\%$. As expected, the MSI-1 embedder generally achieved smaller gains compared to MSI-2, reflecting its reduced capacity. The smallest improvements were observed on datasets characterized by low spatial resolution (e.g., m-so2sat) or increased task complexity, such as the fine-grained classification challenge posed by m-forestnet.
 
 \vspace{0.3cm}
-
 
 \begin{table}[h]
 \centering
@@ -1349,7 +1348,7 @@ The same training procedure was repeated for each of the GEO-Bench classificatio
     \specialrule{.1em}{.2em}{.2em}
     \end{tabular}
 \vspace{0.3cm}
-\caption{\normalsize Comparison of accuracies obtained after training different embedders on the EuroSAT original dataset: the first embedder almost matches the zero shot performance, while the second nearly doubles it.}
+\caption{\normalsize Comparison of accuracies obtained after training different embedders on the EuroSAT original dataset: the first embedder almost matches the zero-shot performance, while the second nearly doubles it.}
 \label{tab:eurosatmsi}
 \end{table}
 
@@ -1390,8 +1389,8 @@ These results confirm that even shallow spectral embedders, when trained on task
 To assess the generalization ability of the MSI embedders, we also conducted transfer learning experiments. In this setting, a single MSI embedder was trained on a specific dataset and then evaluated across all GEO-Bench test splits without further fine-tuning. Three variants were considered:
 
 \begin{itemize}
-    \item \textbf{MSI-T-s}: trained on the \texttt{m-so2sat} dataset, selected for its relatively rich multispectral structure and semantic diversity;
-    \item \textbf{MSI-T-E}: trained on the original EuroSAT dataset, selected for its trade-off between image resolution and labels variety;
+    \item \textbf{MSI-T-s}: trained on the m-so2sat dataset, selected for its relatively rich multispectral structure and semantic diversity;
+    \item \textbf{MSI-T-E}: trained on the original EuroSAT dataset, selected for its trade-off between image resolution and label variety;
     \item \textbf{MSI-T-E-4L}: trained on the original EuroSAT dataset, featuring the 4-layer architecture described in Section \ref{sec:msi_t_4l}.
 \end{itemize}
 
@@ -1430,15 +1429,15 @@ Table \ref{tab:geobenchtransfer} shows the accuracy scores for these models on t
 
 \vspace{-0.5cm}
 
-The results from the transfer learning experiments are mixed. The model incorporating the MSI-T-s embedder, trained on the m-so2sat dataset, shows only modest improvements over the zero-shot baseline on m-forestnet and on m-so2sat itself, while exhibiting notable performance drops on the other datasets. Similarly, the MSI-T-E model, trained on the original EuroSAT, shows performance gains just on a couple of datasets including m-eurosat, which is a modified version of the same dataset it was trained on. In contrast, the MSI-T-E-4L model demonstrates more robust generalization, achieving results comparable to or better than the baseline across all datasets except m-so2sat. Notably, it yields a substantial improvement on m-pv4ger ($+12.81\%$) and only has a significant drop in performance on m-so2sat, likely attributable to the significantly lower resolution of m-so2sat images with respect to EuroSAT. We believe that main cases of poor performance are due to:
+The results from the transfer learning experiments are mixed. The model incorporating the MSI-T-s embedder, trained on the m-so2sat dataset, shows only modest improvements over the zero-shot baseline on m-forestnet and on m-so2sat itself, while exhibiting notable performance drops on the other datasets. Similarly, the MSI-T-E model, trained on the original EuroSAT, shows performance gains just on a couple of datasets, including m-eurosat, which is a modified version of the same dataset it was trained on. In contrast, the MSI-T-E-4L model demonstrates more robust generalization, achieving results comparable to or better than the baseline across all datasets except m-so2sat. Notably, it yields a substantial improvement on m-pv4ger ($+12.81\%$) and only has a significant drop in performance on m-so2sat, likely attributable to the significantly lower resolution of m-so2sat images with respect to EuroSAT. We believe that the main cases of poor performance are due to:
 
 \begin{itemize}
-    \item \textbf{Domain shift}: the source dataset used for training may not fully represent the data distribution of the target domain (e.g., very different scene layout, labels space, image resolution);
+    \item \textbf{Domain shift}: the source dataset used for training may not fully represent the data distribution of the target domain (e.g., very different scene layout, label space, image resolution);
     \item \textbf{Spectral mismatch}: although the band mapping logic was carefully implemented for inference, not all datasets include the same number or types of spectral bands as the training dataset;
     \item \textbf{Possible captions biases}: the training datasets are image classification datasets with single or few semantic classes, potentially inducing biases when the transfer task is semantically or visually different.
 \end{itemize}
 
-Nevertheless, these results highlight the potential of transfer learning at embedder level across remote sensing tasks, especially when the source and target domains share spectral structure or semantic similarity.
+Nevertheless, these results highlight the potential of transfer learning at the embedder level across remote sensing tasks, especially when the source and target domains share spectral structure or semantic similarity.
 
 \section{Training Losses}
 
@@ -1450,14 +1449,14 @@ The following figures show training and validation loss curves for all MSI embed
     \centering
     \includegraphics[width=\textwidth]{img/EuroSAT_loss_plot.png}
      \includegraphics[width=0.5\textwidth]{img/EuroSAT_4L_loss_plot.png}
-    \caption{Training and validation loss of the different type of embedders on the original EuroSAT dataset.}
+    \caption{\normalsize Training and validation loss of the different types of embedders on the original EuroSAT dataset.}
     \label{fig:eurosatloss}
 \end{figure}
 
 \begin{figure}[H]
     \centering
     \includegraphics[width=\textwidth]{img/m-brick-kiln_loss_plot.png}
-    \caption{Training and validation loss of the two embedders on the m-brick-kiln dataset from GEO-Bench.}
+    \caption{\normalsize Training and validation loss of the two embedders on the m-brick-kiln dataset from GEO-Bench.}
     \label{fig:brickloss}
 \end{figure}
 
@@ -1466,7 +1465,7 @@ The following figures show training and validation loss curves for all MSI embed
 \begin{figure}[h]
     \centering
     \includegraphics[width=\textwidth]{img/m-pv4ger_loss_plot.png}
-    \caption{Training and validation loss of the two embedders on the m-pv4ger dataset from GEO-Bench.}
+    \caption{\normalsize Training and validation loss of the two embedders on the m-pv4ger dataset from GEO-Bench.}
     \label{fig:solarloss}
 \end{figure}
 
@@ -1475,14 +1474,14 @@ The following figures show training and validation loss curves for all MSI embed
 \begin{figure}[h]
     \centering
     \includegraphics[width=\textwidth]{img/m-forestnet_loss_plot.png}
-    \caption{Training and validation loss of the two embedders on the m-forestnet dataset from GEO-Bench.}
+    \caption{\normalsize Training and validation loss of the two embedders on the m-forestnet dataset from GEO-Bench.}
     \label{fig:foresloss}
 \end{figure}
 
 \begin{figure}[h]
     \centering
     \includegraphics[width=\textwidth]{img/m-eurosat_loss_plot.png}
-    \caption{Training and validation loss of the two embedders on the m-eurosat dataset from GEO-Bench.}
+    \caption{\normalsize Training and validation loss of the two embedders on the m-eurosat dataset from GEO-Bench.}
     \label{fig:meurosatloss}
 \end{figure}
 
@@ -1491,7 +1490,7 @@ The following figures show training and validation loss curves for all MSI embed
 \begin{figure}[h]
     \centering
     \includegraphics[width=\textwidth]{img/m-so2sat_loss_plot.png}
-    \caption{Training and validation loss of the two embedders on the m-so2sat dataset from GEO-Bench.}
+    \caption{\normalsize Training and validation loss of the two embedders on the m-so2sat dataset from GEO-Bench.}
     \label{fig:so2satloss}
 \end{figure}
 
@@ -1500,7 +1499,7 @@ The following figures show training and validation loss curves for all MSI embed
 \begin{figure}[h]
     \centering
     \includegraphics[width=\textwidth]{img/m-bigearthnet_loss_plot.png}
-    \caption{Training and validation loss of the two embedders on the m-bigearthnet dataset from GEO-Bench.}
+    \caption{\normalsize Training and validation loss of the two embedders on the m-bigearthnet dataset from GEO-Bench.}
     \label{fig:benloss}
 \end{figure}
 
@@ -1509,20 +1508,26 @@ The following figures show training and validation loss curves for all MSI embed
 \chapter{Conclusions} % ---------------------------------------
 
 % Answer research questions and recap findings
-In this thesis, we explored the capabilities and limitations of CLIP-like models in the domain of remote sensing, with a particular focus on classification tasks across diverse multispectral datasets, which was made possible by integrating an MSI embedder component in the model pipeline. Our investigation was guided by three central research questions regarding the baseline performance of existing CLIP-like models in zero-shot classification on standard RGB data, the possibility of improving this performance by incorporating MSI data through a lightweight module and finally the potential of this approach in transfer learning settings.
-To address these questions, we benchmarked four prominent CLIP-based Vision-Language Models (namely CLIP, RemoteCLIP, GeoRSCLIP, and SkyCLIP) on a curated collection of seven remote sensing classification datasets: the EuroSAT dataset in its original version and the six image classification datasets from GEO-Bench. The zero-shot results varied significantly across datasets, with the base CLIP and GeoRSCLIP achieving the best overall performance but still leaving room for improvement, especially in challenging tasks such as fine-grained or low-resolution classification.
-We then introduced a family of lightweight multispectral embedders, proposed in the four versions MSI-1, MSI-2, MSI-T and MSI-T-4L, aimed at extending CLIP to handle MSI input imagery. These embedders were designed to be minimal and adaptable, projecting arbitrary multispectral inputs into a standard 3-channel format that could be then processed by the frozen CLIP encoder. This avoided costly retraining of the full model and opened the possibility of leveraging MSI data with low computational overhead.
-Our experiments demonstrated that training the MSI embedders on task-specific datasets yielded constant gains in classification accuracy compared to the zero-shot CLIP baseline. Notably, the MSI-2 embedder achieved improvements of up to $+25\%$ on certain datasets, while maintaining a parameter count of just $1.1$k that has minimal impact on the size of the model. Even the simpler MSI-1 often surpassed the baseline, highlighting the power of minimal adaptations in specific domains.
+In this thesis, we explored the capabilities and limitations of CLIP-like models in the domain of remote sensing, with a particular focus on classification tasks across diverse multispectral datasets, which was made possible by integrating an MSI embedder component in the model pipeline. Our investigation was guided by three central research questions regarding the baseline performance of existing CLIP-like models in zero-shot classification on standard RGB data, the possibility of improving this performance by incorporating MSI data through a lightweight module and finally the potential of this approach in transfer learning settings. \\
+
+To address these questions, we benchmarked four prominent CLIP-based Vision-Language Models (namely CLIP, RemoteCLIP, GeoRSCLIP, and SkyCLIP) on a curated collection of seven remote sensing classification datasets: the EuroSAT dataset in its original version and the six image classification datasets from GEO-Bench. The zero-shot results varied significantly across datasets, with the base CLIP and GeoRSCLIP achieving the best overall performance but still leaving room for improvement, especially in challenging tasks such as fine-grained or low-resolution classification. \\
+
+We then introduced a family of lightweight multispectral embedders, proposed in the four versions MSI-1, MSI-2, MSI-T and MSI-T-4L, aimed at extending CLIP to handle MSI input imagery. These embedders were designed to be minimal and adaptable, projecting arbitrary multispectral inputs into a standard 3-channel format that could then be processed by the frozen CLIP encoder. This avoided costly retraining of the full model and opened the possibility of leveraging MSI data with low computational overhead.
+Our experiments demonstrated that training the MSI embedders on task-specific datasets yielded constant gains in classification accuracy compared to the zero-shot CLIP baseline. Notably, the MSI-2 embedder achieved improvements of up to $+25\%$ on certain datasets, while maintaining a parameter count of just $1.1$k that has minimal impact on the size of the model. Even the simpler MSI-1 often surpassed the baseline, highlighting the power of minimal adaptations in specific domains. \\
+
 We further investigated the potential of these embedders to generalize across datasets by training on a single source dataset (in our case, we chose either EuroSAT or m-so2sat) and evaluating on the remaining GEO-Bench classification tasks. This emulated a transfer learning scenario in which an embedder trained once could be deployed across multiple downstream tasks.
 The results were more variable this time: both the lighter versions, MSI-T-s trained on m-so2sat and MSI-T-E trained on EuroSAT, showed minor improvements on the target dataset itself but failed to generalize well to other datasets. On the other hand, the more powerful MSI-T-E-4L achieved comparable or higher accuracies than the zero-shot baseline on four out of six datasets (with the exception of m-so2sat and m-bigearthnet), demonstrating promising model capacities and generalization abilities.
-These outcomes suggest that, while transfer learning with our pipeline of trainable MSI embedders and frozen CLIP is feasible and bodes well, its success is strongly influenced by domain similarity, input resolution, and spectral characteristics.
+These outcomes suggest that, while transfer learning with our pipeline of trainable MSI embedders and frozen CLIP is feasible and bodes well, its success is strongly influenced by domain similarity, input resolution, and spectral characteristics. \\
+
 % Discuss benefits and limitations
 Overall, our findings confirm that including multispectral data can significantly improve classification performance over vanilla CLIP, even without touching the original model weights. Moreover, in some cases, our models reached or even surpassed the performance of RemoteCLIP and SkyCLIP, which required extensive pretraining or fine-tuning on remote sensing image-text datasets often built ad hoc. This suggests that lightweight adaptations can sometimes offer a more efficient alternative to full model retraining, especially when domain data is scarce.
-Nonetheless, this work shows several limitations. We limited our evaluation to the ViT-B/32 backbone of CLIP, leaving out deeper and more powerful architectures such as ViT-B/16 or ViT-L/14. We did not explore hyperparameter optimization, prompt tuning, or ensemble methods, all of which could further boost performance. Moreover, the MSI embedders were designed for simplicity and computational efficiency; more advanced architectural choices were not explored, such as attention-based fusion or dynamic filtering. On a positive note, most of these limitations could be easily overcome in future work. 
+Nonetheless, this work shows several limitations. We limited our evaluation to the ViT-B/32 backbone of CLIP, leaving out deeper and more powerful architectures such as ViT-B/16 or ViT-L/14. We did not explore hyperparameter optimization, prompt tuning, or ensemble methods, all of which could further boost performance. Moreover, the MSI embedders were designed for simplicity and computational efficiency; more advanced architectural choices were not explored, such as attention-based fusion or dynamic filtering. \\
+
+On a positive note, most of these limitations could be easily overcome in future work. 
 % Future work possible directions
 As directions for further development of this thesis, we also recommend:
 \begin{itemize}
-    \item \textbf{Parameter-Efficient Fine-tuning the CLIP model} (or its vision encoder alone) on MSI inputs via adapters or LoRA layers \cite{hu2021loralowrankadaptationlarge} \cite{xin2024parameter};
+    \item \textbf{Parameter-efficient fine-tuning the CLIP model} (or its vision encoder alone) on MSI inputs via adapters or LoRA layers \cite{hu2021loralowrankadaptationlarge} \cite{xin2024parameter};
     \item \textbf{Expanding to other tasks} including segmentation \cite{luddecke2022image}, retrieval \cite{radford2021learning}, or captioning \cite{li2022blip} to fully exploit CLIP's multimodal potential;
     \item \textbf{Employing larger image-text datasets}, such as SkyScript \cite{wang2024skyscript} or Major TOM \cite{francis2024major}, with higher image resolution and richer textual description, for supervised or contrastive pretraining of the embedders or text components;
     \item \textbf{Extending to multilingual prompts} as in \cite{silva2024multilingual}, to open new applications in international and humanitarian monitoring scenarios;
@@ -1569,7 +1574,7 @@ The multilabel dataset m-bigearthnet proved particularly hard to handle when app
 \end{table}
 
 This limitation stems from CLIP’s original contrastive formulation, which is designed for image–text alignment rather than independent multi-label decisions.
-We include these results for completeness, but acknowledge that the multilabel scenario requires a more specific treatment. A promising alternative is to reframe the problem using dedicated architectures, such as the one proposed in a recent work \cite{guo2024multimodal} where the author enhanced CLIP with trainable classification heads and explored various fusion mechanisms and loss functions tailored to multilabel learning, achieving top tier performance on competitive benchmarks. Inspired by this approach, future research could integrate it with our MSI embedder framework and a remote sensing–specialized CLIP model like GeoRSCLIP or SkyCLIP, tackling multilabel classification with a tailored architecture to better capture the complexity of the task.
+We include these results for completeness, but acknowledge that the multilabel scenario requires a more specific treatment. A promising alternative is to reframe the problem using dedicated architectures, such as the one proposed in a recent work \cite{guo2024multimodal}, where the author enhanced CLIP with trainable classification heads and explored various fusion mechanisms and loss functions tailored to multilabel learning, achieving top-tier performance on competitive benchmarks. Inspired by this approach, future research could integrate it with our MSI embedder framework and a remote sensing–specialized CLIP model like GeoRSCLIP or SkyCLIP, tackling multilabel classification with a tailored architecture to better capture the complexity of the task.
 
 
 \backmatter
